@@ -1,3 +1,4 @@
+import path from "path";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -1586,7 +1587,12 @@ CREATE TABLE IF NOT EXISTS reviews (
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+// Serve React build files
+app.use(express.static(path.join(process.cwd(), "dist")));
 
+app.get("*", (req, res) => {
+  res.sendFile(path.join(process.cwd(), "dist", "index.html"));
+});
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Premium Server] running at http://localhost:${PORT}`);
   });
