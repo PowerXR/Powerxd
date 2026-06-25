@@ -649,11 +649,31 @@ async function startServer() {
             if (resJson.data) {
               if (typeof resJson.data.amount === 'number') {
                 verifiedAmount = resJson.data.amount;
+              } else if (typeof resJson.data.amount === 'string') {
+                verifiedAmount = parseFloat(resJson.data.amount || "0");
               } else if (resJson.data.amount && typeof resJson.data.amount === 'object') {
-                verifiedAmount = typeof resJson.data.amount.amount === 'number'
-                  ? resJson.data.amount.amount
-                  : parseFloat(resJson.data.amount.amount || "0");
+                if (typeof resJson.data.amount.amount === 'number') {
+                  verifiedAmount = resJson.data.amount.amount;
+                } else if (typeof resJson.data.amount.amount === 'string') {
+                  verifiedAmount = parseFloat(resJson.data.amount.amount || "0");
+                } else if (typeof resJson.data.amount.value === 'number') {
+                  verifiedAmount = resJson.data.amount.value;
+                } else if (typeof resJson.data.amount.value === 'string') {
+                  verifiedAmount = parseFloat(resJson.data.amount.value || "0");
+                }
               }
+              
+              if (verifiedAmount === 0 && resJson.data.transAmount) {
+                verifiedAmount = typeof resJson.data.transAmount === 'number'
+                  ? resJson.data.transAmount
+                  : parseFloat(String(resJson.data.transAmount) || "0");
+              }
+            }
+            
+            if (verifiedAmount === 0 && typeof resJson.amount === 'number') {
+              verifiedAmount = resJson.amount;
+            } else if (verifiedAmount === 0 && typeof resJson.amount === 'string') {
+              verifiedAmount = parseFloat(resJson.amount || "0");
             }
 
             if (verifiedAmount > 0) {
@@ -694,7 +714,12 @@ async function startServer() {
                 message: `ระบบตรวจสอบสลิปสำเร็จผ่าน EasySlip V2! เพิ่มเครดิตให้กับบัญชีเรียบร้อยแล้ว +${verifiedAmount} บาท`
               });
             } else {
-              return res.status(400).json({ error: "ยอดเงินโอนในสลิปไม่ถูกต้อง หรือไม่สามารถดึงข้อมูลยอดเงินได้สำเร็จ" });
+              console.warn("EasySlip verification succeeded but verifiedAmount is 0 or could not be parsed. Falling back to Gemini...");
+              easySlipErrorLocal = {
+                errCode: "PARSING_AMOUNT_FAILED",
+                errMsg: "ตรวจสอบสลิปสำเร็จจากเว็บ EasySlip แต่ไม่สามารถแปลงฟิลด์จำนวนเงินได้สำเร็จ",
+                status: 400
+              };
             }
           } else {
             const errCode = resJson.error?.code || "EASYSLIP_ERROR";
