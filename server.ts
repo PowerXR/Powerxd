@@ -743,7 +743,10 @@ async function startServer() {
             receiverName = "นาย ธนกฤต ชูกำเนิด";
           }
 
-          if (verifiedAmount > 0) {
+          if (
+          verifiedAmount > 0 &&
+          verifiedAmount === depositAmount
+          ) {
             // Anti-Double Spend Guard
             const isDuplicate = db.transactions.some((tx: any) => tx.details && tx.details.includes(transRef));
             if (isDuplicate) {
