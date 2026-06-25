@@ -130,14 +130,14 @@ export default function CategoriesAndProducts({
           </div>
         </button>
 
-        {categories.map((cat) => {
+        {categories.map((cat, idx) => {
           const count = products.filter((p) => p.categoryId === cat.id).length;
           const isSelected = selectedCategory === cat.id;
           const hasBg = !!cat.imageUrl;
 
           return (
             <button
-              key={cat.id}
+              key={`${cat.id}-${idx}`}
               onClick={() => setSelectedCategory(cat.id)}
               style={hasBg && !isSelected ? { backgroundImage: `url(${cat.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
               className={`relative overflow-hidden flex items-center gap-3.5 p-4 rounded-2xl border text-sm text-left transition-all duration-500 hover:-translate-y-0.5 cursor-pointer ${
@@ -195,11 +195,11 @@ export default function CategoriesAndProducts({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProducts.map((prod) => {
+          {filteredProducts.map((prod, idx) => {
             const isOutOfStock = prod.stock.length < 1;
             return (
               <motion.div
-                key={prod.id}
+                key={`${prod.id}-${idx}`}
                 layout
                 whileHover={{ y: -8 }}
                 transition={{ duration: 0.3 }}

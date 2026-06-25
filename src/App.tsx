@@ -8,6 +8,8 @@ import TopupModal from "./components/TopupModal";
 import AdminPanel from "./components/AdminPanel";
 import AuthModal from "./components/AuthModal";
 import HistoryModal from "./components/HistoryModal";
+import NamNoiMap from "./components/NamNoiMap";
+
 
 // Icons
 import { 
@@ -679,6 +681,9 @@ export default function App() {
             </div>
           </section>
 
+          {/* Interactive Map of Nam Noi Subdistrict Municipality */}
+          <NamNoiMap />
+
           {/* Footer of Shop */}
           <footer className="border-t border-[#8E6D4E]/15 bg-[#FAF7F2] dark:bg-[#141210] py-14 mt-20 text-[#4E3B2C] dark:text-stone-300">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
@@ -737,7 +742,7 @@ export default function App() {
               />
             )}
 
-            {/* 2. Topup Menu QR & Angpao */}
+            {/* 2. Topup Menu Bank Transfer QR Slip */}
             {topupModalOpen && (
               <TopupModal 
                 user={user}

@@ -135,6 +135,38 @@ export default function AdminPanel({
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Custom confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {}
+  });
+
+  // Custom alert / toast state
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info"
+  });
+
+  const showCustomAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
+    setAlertState({ isOpen: true, title, message, type });
+  };
+
   // User management states
   const [usersList, setUsersList] = useState<User[]>([]);
   const [userListLoading, setUserListLoading] = useState(false);
@@ -285,34 +317,38 @@ export default function AdminPanel({
     }
   };
 
-  const handleDeleteUser = async (id: string) => {
+  const handleDeleteUser = (id: string) => {
     if (id === "usr-admin") {
-      alert("ไม่สามารถลบผู้ดูแลระบบหลัก (admin) เพื่อป้องกันข้อผิดพลาดทางสิทธิ์ระบบได้ค่ะ");
+      showCustomAlert("เกิดข้อผิดพลาด", "ไม่สามารถลบผู้ดูแลระบบหลัก (admin) เพื่อป้องกันข้อผิดพลาดทางสิทธิ์ระบบได้ค่ะ", "error");
       return;
     }
-    if (!window.confirm("คุณมั่นใจหรือไม่ว่าต้องการลบผู้ใช้งานรายนี้? ประวัติทั้งหมดจะถูกจำกัดสิทธิ์ทันที")) {
-      return;
-    }
-    try {
-      const res = await fetch(`/api/users/${id}`, {
-        method: "DELETE",
-        headers: {
-          "X-User-Role": "admin"
+    setConfirmDialog({
+      isOpen: true,
+      title: "ยืนยันการลบผู้ใช้งาน",
+      message: "คุณมั่นใจหรือไม่ว่าต้องการลบผู้ใช้งานรายนี้? ประวัติทั้งหมดจะถูกจำกัดสิทธิ์ทันที",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/users/${id}`, {
+            method: "DELETE",
+            headers: {
+              "X-User-Role": "admin"
+            }
+          });
+          const text = await res.text();
+          const data = JSON.parse(text);
+          if (res.ok && data.success) {
+            showCustomAlert("สำเร็จ", "ลบผู้ใช้สำเร็จ!", "success");
+            fetchUsers();
+            onRefreshData();
+          } else {
+            showCustomAlert("ลบไม่สำเร็จ", data.error || "ลบผู้ใช้ไม่สำเร็จ", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showCustomAlert("เกิดข้อผิดพลาด", "เครือข่ายขัดข้อง", "error");
         }
-      });
-      const text = await res.text();
-      const data = JSON.parse(text);
-      if (res.ok && data.success) {
-        alert("ลบผู้ใช้สำเร็จ!");
-        fetchUsers();
-        onRefreshData();
-      } else {
-        alert(data.error || "ลบผู้ใช้ไม่สำเร็จ");
       }
-    } catch (err) {
-      console.error(err);
-      alert("เครือข่ายขัดข้อง");
-    }
+    });
   };
 
   const handleUserSubmit = async (e: React.FormEvent) => {
@@ -470,17 +506,23 @@ export default function AdminPanel({
     }
   };
 
-  const handleDeletePortfolio = async (id: string) => {
-    if (!confirm("คุณต้องการลบผลงานนี้ใช่หรือไม่?")) return;
-    try {
-      const updatedPortfolios = (editedSettings.portfolios || []).filter(p => p.id !== id);
-      const newSettings = { ...editedSettings, portfolios: updatedPortfolios };
-      setEditedSettings(newSettings);
-      await onUpdateSettings(newSettings);
-      alert("ลบผลงานเรียบร้อยแล้วค่ะ!");
-    } catch (err) {
-      alert("เกิดข้อผิดพลาดในการลบผลงาน");
-    }
+  const handleDeletePortfolio = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "ยืนยันการลบผลงาน",
+      message: "คุณต้องการลบผลงานนี้ออกจากประวัติร้านค้าใช่หรือไม่?",
+      onConfirm: async () => {
+        try {
+          const updatedPortfolios = (editedSettings.portfolios || []).filter(p => p.id !== id);
+          const newSettings = { ...editedSettings, portfolios: updatedPortfolios };
+          setEditedSettings(newSettings);
+          await onUpdateSettings(newSettings);
+          showCustomAlert("สำเร็จ", "ลบผลงานเรียบร้อยแล้วค่ะ!", "success");
+        } catch (err) {
+          showCustomAlert("เกิดข้อผิดพลาด", "เกิดข้อผิดพลาดในการลบผลงาน", "error");
+        }
+      }
+    });
   };
 
   // Artisan actions handlers
@@ -516,17 +558,23 @@ export default function AdminPanel({
     }
   };
 
-  const handleDeleteArtisan = async (id: string) => {
-    if (!confirm("คุณต้องการลบข้อมูลช่างฝีมือท่านนี้ใช่หรือไม่?")) return;
-    try {
-      const updatedArtisans = (editedSettings.artisans || []).filter(a => a.id !== id);
-      const newSettings = { ...editedSettings, artisans: updatedArtisans };
-      setEditedSettings(newSettings);
-      await onUpdateSettings(newSettings);
-      alert("ลบช่างฝีมือเรียบร้อยแล้วค่ะ!");
-    } catch (err) {
-      alert("เกิดข้อผิดพลาดในการลบช่างฝีมือ");
-    }
+  const handleDeleteArtisan = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "ยืนยันการลบข้อมูลช่างฝีมือ",
+      message: "คุณต้องการลบข้อมูลช่างฝีมือท่านนี้ใช่หรือไม่?",
+      onConfirm: async () => {
+        try {
+          const updatedArtisans = (editedSettings.artisans || []).filter(a => a.id !== id);
+          const newSettings = { ...editedSettings, artisans: updatedArtisans };
+          setEditedSettings(newSettings);
+          await onUpdateSettings(newSettings);
+          showCustomAlert("สำเร็จ", "ลบช่างฝีมือเรียบร้อยแล้วค่ะ!", "success");
+        } catch (err) {
+          showCustomAlert("เกิดข้อผิดพลาด", "เกิดข้อผิดพลาดในการลบช่างฝีมือ", "error");
+        }
+      }
+    });
   };
 
   // Product actions handler
@@ -565,15 +613,24 @@ export default function AdminPanel({
     }
   };
 
-  const deleteProduct = async (id: string) => {
-    if (!confirm("คุณแน่ใจหรือไม่ที่จะลบสินค้าชิ้นนี้?")) return;
-    const res = await fetch(`/api/products/${id}`, {
-      method: "DELETE",
-      headers: { "X-User-Role": "admin" }
+  const deleteProduct = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "ยืนยันการลบสินค้า",
+      message: "คุณแน่ใจหรือไม่ที่จะลบสินค้าชิ้นนี้ออกจากระบบ?",
+      onConfirm: async () => {
+        const res = await fetch(`/api/products/${id}`, {
+          method: "DELETE",
+          headers: { "X-User-Role": "admin" }
+        });
+        if (res.ok) {
+          showCustomAlert("สำเร็จ", "ลบสินค้าเรียบร้อยแล้วค่ะ!", "success");
+          onRefreshData();
+        } else {
+          showCustomAlert("เกิดข้อผิดพลาด", "ไม่สามารถลบสินค้าได้ในขณะนี้", "error");
+        }
+      }
     });
-    if (res.ok) {
-      onRefreshData();
-    }
   };
 
   // Category actions handler
@@ -592,22 +649,31 @@ export default function AdminPanel({
     });
 
     if (res.ok) {
-      alert(editingCategoryId ? "แก้ไขข้อมูลหมวดหมู่สำเร็จ!" : "สร้างหมดหมู่สำเร็จ!");
+      showCustomAlert("สำเร็จ", editingCategoryId ? "แก้ไขข้อมูลหมวดหมู่สำเร็จ!" : "สร้างหมดหมู่สำเร็จ!", "success");
       setShowCategoryForm(false);
       setEditingCategoryId(null);
       onRefreshData();
     }
   };
 
-  const deleteCategory = async (id: string) => {
-    if (!confirm("คุณแน่ใจที่จะลบหมวดหมู่สินค้านี้?")) return;
-    const res = await fetch(`/api/categories/${id}`, {
-      method: "DELETE",
-      headers: { "X-User-Role": "admin" }
+  const deleteCategory = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "ยืนยันการลบหมวดหมู่",
+      message: "คุณแน่ใจที่จะลบหมวดหมู่สินค้านี้ใช่หรือไม่? สินค้าในหมวดหมู่นี้จะไม่มีหมวดหมู่ระบุ",
+      onConfirm: async () => {
+        const res = await fetch(`/api/categories/${id}`, {
+          method: "DELETE",
+          headers: { "X-User-Role": "admin" }
+        });
+        if (res.ok) {
+          showCustomAlert("สำเร็จ", "ลบหมวดหมู่เรียบร้อยแล้วค่ะ!", "success");
+          onRefreshData();
+        } else {
+          showCustomAlert("เกิดข้อผิดพลาด", "ไม่สามารถลบหมวดหมู่ได้ในขณะนี้", "error");
+        }
+      }
     });
-    if (res.ok) {
-      onRefreshData();
-    }
   };
 
   // Coupon actions handler
@@ -623,22 +689,31 @@ export default function AdminPanel({
     });
 
     if (res.ok) {
-      alert("เพิ่มคูปองส่วนลดสำเร็จ!");
+      showCustomAlert("สำเร็จ", "เพิ่มคูปองส่วนลดสำเร็จ!", "success");
       setShowCouponForm(false);
       setCouponForm({ code: "", discountPercent: 0, discountBaht: 0, usesLeft: 10 });
       onRefreshData();
     }
   };
 
-  const deleteCoupon = async (code: string) => {
-    if (!confirm("ลบส่วนลดโค้ดนี้?")) return;
-    const res = await fetch(`/api/coupons/${code}`, {
-      method: "DELETE",
-      headers: { "X-User-Role": "admin" }
+  const deleteCoupon = (code: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "ยืนยันการลบคูปองส่วนลด",
+      message: `คุณแน่ใจหรือไม่ที่จะลบส่วนลดโค้ด [${code}]?`,
+      onConfirm: async () => {
+        const res = await fetch(`/api/coupons/${code}`, {
+          method: "DELETE",
+          headers: { "X-User-Role": "admin" }
+        });
+        if (res.ok) {
+          showCustomAlert("สำเร็จ", "ลบคูปองส่วนลดเรียบร้อยแล้วค่ะ!", "success");
+          onRefreshData();
+        } else {
+          showCustomAlert("เกิดข้อผิดพลาด", "ไม่สามารถลบคูปองส่วนลดได้ในขณะนี้", "error");
+        }
+      }
     });
-    if (res.ok) {
-      onRefreshData();
-    }
   };
 
   const handleCopyCode = (content: string, index: number) => {
@@ -842,21 +917,16 @@ export default function AdminPanel({
                 ) : (
                   <>
                     {/* Revenue blocks grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="p-4 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
                         <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-400">รายได้รวมทั้งหมด</span>
                         <h3 className="text-2xl font-black text-white">{(stats?.revenue?.total || 0).toLocaleString()} ฿</h3>
-                        <p className="text-[9px] text-slate-400">มาจากการสแกน QR และซองของขวัญสุทธิ</p>
+                        <p className="text-[9px] text-slate-400">มาจากการโอนผ่านบัญชีธนาคาร (เช็คผ่าน API สลิปอัตโนมัติสำเร็จ)</p>
                       </div>
                       <div className="p-4 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
-                        <span className="text-[10px] uppercase tracking-wider font-extrabold text-cyan-400">รายได้ผ่าน PromptPay QR</span>
+                        <span className="text-[10px] uppercase tracking-wider font-extrabold text-cyan-400">รายได้ผ่านการโอนบัญชีธนาคาร (QR)</span>
                         <h3 className="text-2xl font-black text-white">{(stats?.revenue?.qr || 0).toLocaleString()} ฿</h3>
                         <p className="text-[9px] text-slate-400">เช็คผ่าน API สลิปอัตโนมัติสำเร็จ</p>
-                      </div>
-                      <div className="p-4 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
-                        <span className="text-[10px] uppercase tracking-wider font-extrabold text-purple-400">รายได้ผ่านซอง TrueMoney</span>
-                        <h3 className="text-2xl font-black text-white">{(stats?.revenue?.angpao || 0).toLocaleString()} ฿</h3>
-                        <p className="text-[9px] text-slate-400">ตรวจสอบซองของขวัญออโต้สำเร็จ</p>
                       </div>
                     </div>
 
@@ -2635,6 +2705,61 @@ CREATE TABLE IF NOT EXISTS users (
           </div>
 
         </div>
+
+        {/* Custom Confirmation Modal */}
+        {confirmDialog.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+            <div className="relative w-full max-w-md rounded-2xl bg-[#1c1c21] border border-white/10 p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+              <h3 className="text-lg font-bold text-white mb-2">{confirmDialog.title}</h3>
+              <p className="text-sm text-slate-300 mb-6">{confirmDialog.message}</p>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+                >
+                  {confirmDialog.cancelText || "ยกเลิก"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    confirmDialog.onConfirm();
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition-all cursor-pointer shadow-lg shadow-red-600/20"
+                >
+                  {confirmDialog.confirmText || "ยืนยันการลบ"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Alert Modal */}
+        {alertState.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+            <div className="relative w-full max-w-md rounded-2xl bg-[#1c1c21] border border-white/10 p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+              <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                {alertState.type === "success" && <span className="text-emerald-500">✓</span>}
+                {alertState.type === "error" && <span className="text-red-500">✗</span>}
+                {alertState.type === "info" && <span className="text-amber-500">ℹ</span>}
+                {alertState.title}
+              </h3>
+              <p className="text-sm text-slate-300 mb-6">{alertState.message}</p>
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+                  className={`px-5 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-md ${
+                    alertState.type === "error" ? "bg-red-600 hover:bg-red-500 shadow-red-600/10" : "bg-amber-600 hover:bg-amber-500 shadow-amber-600/10"
+                  }`}
+                >
+                  ตกลง
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

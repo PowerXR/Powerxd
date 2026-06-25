@@ -113,9 +113,9 @@ export default function HistoryModal({
               <p className="text-stone-400 text-xs font-light">คุณยังไม่มีสถิติสั่งอุดหนุนสินค้าในประวัติขณะนี้</p>
             </div>
           ) : (
-            txs.map((tx) => (
+            txs.map((tx, idx) => (
               <div 
-                key={tx.id} 
+                key={`${tx.id}-${idx}`} 
                 className="p-4 rounded-2xl bg-white dark:bg-[#151210] border border-[#8E6D4E]/10 space-y-2.5 hover:border-[#8E6D4E]/25 transition-all shadow-sm"
               >
                 {/* Upper bar */}

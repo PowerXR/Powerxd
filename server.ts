@@ -1,4 +1,3 @@
-import path from "path";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -32,7 +31,7 @@ function loadDB() {
         "https://images.unsplash.com/photo-1612287230202-1bf1d85d1bdf?auto=format&fit=crop&w=1200&q=80",
         "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80"
       ],
-      allowAngpao: true,
+      allowAngpao: false,
       allowQr: true,
       siteLogoUrl: "",
       siteBackgroundUrl: "",
@@ -592,52 +591,7 @@ async function startServer() {
 
   // Verify TrueMoney Wallet Angpao API
   app.post("/api/payments/verify-angpao", (req, res) => {
-    const userId = req.headers["x-user-id"] as string;
-    const { link } = req.body;
-
-    const userIndex = db.users.findIndex((u: any) => u.id === userId);
-    if (userIndex === -1) return res.status(403).json({ error: "กรุณาเข้าสู่ระบบก่อน" });
-    const user = db.users[userIndex];
-
-    if (!link || !link.includes("gift.truemoney.com/campaign/?v=")) {
-      return res.status(400).json({ error: "รูปแบบลิงก์ซองอั่งเปาไม่ถูกต้อง" });
-    }
-
-    // Simulating TrueMoney API call verification
-    // Extract code
-    const parts = link.split("?v=");
-    const code = parts[1] ? parts[1].split("&")[0] : "";
-    if (code.length < 5) {
-      return res.status(400).json({ error: "ลิงก์ซองอั่งเปาสิ้นอายุหรือไม่สามารถอ่านโค้ดได้" });
-    }
-
-    // Simulated amount (e.g. 50 Baht, 100 Baht, or 500 Baht based on code contents)
-    let depositAmount = 50.00;
-    if (code.toLowerCase().includes("vip")) depositAmount = 500.00;
-    else if (code.toLowerCase().includes("pro")) depositAmount = 150.00;
-    else if (code.toLowerCase().length > 15) depositAmount = 100.00;
-
-    user.balance = parseFloat((user.balance + depositAmount).toFixed(2));
-
-    const newTx: Transaction = {
-      id: "tx-angpao-" + Date.now(),
-      userId: user.id,
-      username: user.username,
-      type: "topup_angpao",
-      amount: depositAmount,
-      details: `เติมเงินผ่านซองอั่งเปาลิ้งก์รหัส [${code}] สำเร็จ`,
-      status: "success",
-      date: new Date().toISOString()
-    };
-
-    db.transactions.unshift(newTx);
-    saveDB(db);
-
-    res.json({
-      success: true,
-      amount: depositAmount,
-      newBalance: user.balance
-    });
+    return res.status(400).json({ error: "ช่องทางการเติมเงินแบบอั่งเปาถูกยกเลิกแล้วค่ะ กรุณาโอนเงินผ่านบัญชีธนาคารเท่านั้น" });
   });
 
   // Verify Slip QR Code Upload with AI Gemini scan and automatic safety fallback
@@ -670,32 +624,21 @@ async function startServer() {
       let easySlipChecked = false;
 
       // Try EasySlip API v2 first
-      if (easyslipApiKey) {
+      if (easyslipApiKey && qrPayload) {
         try {
-          console.log("Calling EasySlip v2 API to verify bank slip...");
+          console.log("Calling EasySlip v2 API with payload:", qrPayload);
           easySlipChecked = true;
           
-          let mimeType = "image/png";
-          if (slipImage.includes(",")) {
-            const parts = slipImage.split(",");
-            const match = parts[0].match(/data:(.*?);base64/);
-            if (match) {
-              mimeType = match[1];
-            }
-          }
-
-          const base64Buffer = Buffer.from(base64Part, "base64");
-          const blob = new Blob([base64Buffer], { type: mimeType });
-          const formData = new FormData();
-          formData.append("image", blob, "slip.png");
-          formData.append("file", blob, "slip.png");
-
           const easySlipResponse = await fetch("https://api.easyslip.com/v2/verify/bank", {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${easyslipApiKey}`
+              "Authorization": `Bearer ${easyslipApiKey}`,
+              "Content-Type": "application/json"
             },
-            body: formData
+            body: JSON.stringify({
+              payload: qrPayload,
+              matchAccount: true
+            })
           });
 
           const resJson = await easySlipResponse.json();
@@ -736,7 +679,7 @@ async function startServer() {
                 username: user.username,
                 type: "topup_qr",
                 amount: verifiedAmount,
-                details: `ตรวจสอบผ่าน EasySlip สำเร็จ ยอดโอน ${verifiedAmount} บาท (อ้างอิง: ${transRef}) 🧾 ธนาคาร: ${bankShort} จาก: [${senderName}] ถึง: [${receiverName}]`,
+                details: `ตรวจสอบผ่าน EasySlip V2 สำเร็จ ยอดโอน ${verifiedAmount} บาท (อ้างอิง: ${transRef}) 🧾 ธนาคาร: ${bankShort} จาก: [${senderName}] ถึง: [${receiverName}]`,
                 status: "success",
                 date: new Date().toISOString()
               };
@@ -748,14 +691,14 @@ async function startServer() {
                 success: true,
                 amount: verifiedAmount,
                 newBalance: user.balance,
-                message: `ระบบตรวจสอบสลิปสำเร็จผ่าน EasySlip! เพิ่มเครดิตให้กับร้านค้าเรียบร้อยแล้ว +${verifiedAmount} บาท`
+                message: `ระบบตรวจสอบสลิปสำเร็จผ่าน EasySlip V2! เพิ่มเครดิตให้กับบัญชีเรียบร้อยแล้ว +${verifiedAmount} บาท`
               });
             } else {
               return res.status(400).json({ error: "ยอดเงินโอนในสลิปไม่ถูกต้อง หรือไม่สามารถดึงข้อมูลยอดเงินได้สำเร็จ" });
             }
           } else {
             const errCode = resJson.error?.code || "EASYSLIP_ERROR";
-            const errMsg = resJson.error?.message || "ตรวจสอบรูปสลิปไม่สำเร็จ (ไม่พบข้อมูลการโอนหรือ QR Code)";
+            const errMsg = resJson.error?.message || "ตรวจสอบสลิปผ่าน EasySlip V2 ไม่สำเร็จ";
             console.error(`EasySlip API error: Code: ${errCode}, Message: ${errMsg}`);
             
             easySlipErrorLocal = {
@@ -1587,12 +1530,7 @@ CREATE TABLE IF NOT EXISTS reviews (
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
-// Serve React build files
-app.use(express.static(path.join(process.cwd(), "dist")));
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "dist", "index.html"));
-});
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Premium Server] running at http://localhost:${PORT}`);
   });
