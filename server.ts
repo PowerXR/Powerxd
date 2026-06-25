@@ -701,8 +701,13 @@ async function startServer() {
         const blob = new Blob([buffer], { type: mimeType });
         
         const thunderFormData = new FormData();
+
         thunderFormData.append("image", blob, `slip.${mimeType.split("/")[1] || "png"}`);
         thunderFormData.append("checkDuplicate", "true");
+
+        // เพิ่ม 2 บรรทัดนี้
+        thunderFormData.append("matchAccount", "true");
+        thunderFormData.append("matchAmount", depositAmount.toString());
 
         const thunderResponse = await fetch("https://api.thunder.in.th/v2/verify/bank", {
           method: "POST",
