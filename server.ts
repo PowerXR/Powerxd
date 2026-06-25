@@ -610,9 +610,8 @@ async function startServer() {
 
     const mockRef = slipRef || "REF-API-" + Math.floor(100000 + Math.random() * 900000);
 
-    // 1. If we received a real slip image (Base64) and the EasySlip or Gemini API Key is available
+    // 1. If we received a real slip image (Base64) and the API Key or Gemini is available
     if (slipImage && !isSimulation) {
-      const easyslipApiKey = process.env.EASYSLIP_API_KEY || "4fa235ab-c291-45fd-b72b-810a305a3982";
       let base64Part = "";
       if (slipImage.includes(",")) {
         base64Part = slipImage.split(",")[1];
@@ -620,129 +619,125 @@ async function startServer() {
         base64Part = slipImage;
       }
 
-      let easySlipErrorLocal: { errCode: string; errMsg: string; status: number } | null = null;
-      let easySlipChecked = false;
+      let thunderErrorLocal: { errCode: string; errMsg: string; status: number } | null = null;
 
-      // Try EasySlip API v2 first
-      if (easyslipApiKey && qrPayload) {
-        try {
-          console.log("Calling EasySlip v2 API with payload:", qrPayload);
-          easySlipChecked = true;
+      // =========================================================================
+      // Thunder.in.th V2 Bank Slip Image Verification Integration
+      // =========================================================================
+      try {
+        console.log("Calling Thunder.in.th API for image-based bank slip verification...");
+        
+        let mimeType = "image/png";
+        if (slipImage.includes(",")) {
+          const parts = slipImage.split(",");
+          const match = parts[0].match(/data:(.*?);base64/);
+          if (match) {
+            mimeType = match[1];
+          }
+        }
+
+        const buffer = Buffer.from(base64Part, "base64");
+        const blob = new Blob([buffer], { type: mimeType });
+        
+        const thunderFormData = new FormData();
+        thunderFormData.append("image", blob, `slip.${mimeType.split("/")[1] || "png"}`);
+        thunderFormData.append("checkDuplicate", "true");
+
+        const thunderResponse = await fetch("https://api.thunder.in.th/v2/verify/bank", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer 375e17b2-ca57-4f02-9f59-4f2978e428e1"
+          },
+          body: thunderFormData
+        });
+
+        const resJson: any = await thunderResponse.json();
+        console.log("Thunder API response:", JSON.stringify(resJson));
+
+        if (thunderResponse.ok && resJson.success && resJson.data) {
+          const data = resJson.data;
+          const rawSlip = data.rawSlip;
           
-          const easySlipResponse = await fetch("https://api.easyslip.com/v2/verify/bank", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${easyslipApiKey}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              payload: qrPayload,
-              matchAccount: true
-            })
-          });
+          let verifiedAmount = 0;
+          let transRef = "";
+          let senderName = "";
+          let receiverName = "";
+          let bankShort = "BANK";
 
-          const resJson = await easySlipResponse.json();
-          console.log("EasySlip API response:", JSON.stringify(resJson));
-
-          if (easySlipResponse.ok && resJson.success) {
-            let verifiedAmount = 0;
-            if (resJson.data) {
-              if (typeof resJson.data.amount === 'number') {
-                verifiedAmount = resJson.data.amount;
-              } else if (typeof resJson.data.amount === 'string') {
-                verifiedAmount = parseFloat(resJson.data.amount || "0");
-              } else if (resJson.data.amount && typeof resJson.data.amount === 'object') {
-                if (typeof resJson.data.amount.amount === 'number') {
-                  verifiedAmount = resJson.data.amount.amount;
-                } else if (typeof resJson.data.amount.amount === 'string') {
-                  verifiedAmount = parseFloat(resJson.data.amount.amount || "0");
-                } else if (typeof resJson.data.amount.value === 'number') {
-                  verifiedAmount = resJson.data.amount.value;
-                } else if (typeof resJson.data.amount.value === 'string') {
-                  verifiedAmount = parseFloat(resJson.data.amount.value || "0");
-                }
-              }
-              
-              if (verifiedAmount === 0 && resJson.data.transAmount) {
-                verifiedAmount = typeof resJson.data.transAmount === 'number'
-                  ? resJson.data.transAmount
-                  : parseFloat(String(resJson.data.transAmount) || "0");
-              }
-            }
-            
-            if (verifiedAmount === 0 && typeof resJson.amount === 'number') {
-              verifiedAmount = resJson.amount;
-            } else if (verifiedAmount === 0 && typeof resJson.amount === 'string') {
-              verifiedAmount = parseFloat(resJson.amount || "0");
-            }
-
-            if (verifiedAmount > 0) {
-              const transRef = resJson.data.transRef || "REF-EASYSLIP-" + Math.floor(100000 + Math.random() * 900000);
-              const senderName = resJson.data.sender?.account?.name?.th || resJson.data.sender?.displayName || "ไม่ทราบชื่อผู้โอน";
-              const receiverName = resJson.data.receiver?.account?.name?.th || resJson.data.receiver?.displayName || "นาย ธนกฤต ชูกำเนิด";
-              const bankShort = resJson.data.sender?.bank?.short || "BANK";
-
-              // Anti-Double Spend Guard
-              const isDuplicate = db.transactions.some((tx: any) => tx.details && tx.details.includes(transRef));
-              if (isDuplicate) {
-                return res.status(400).json({
-                  success: false,
-                  error: "สลิปอ้างอิงรายการโอนนี้ได้รับการตรวจสอบและเติมเครดิตเข้าสู่ระบบไปแล้ว ห้ามนำสลิปเก่ามาสแกนซ้ำ"
-                });
-              }
-
-              user.balance = parseFloat((user.balance + verifiedAmount).toFixed(2));
-
-              const newTx: Transaction = {
-                id: "tx-qr-" + Date.now(),
-                userId: user.id,
-                username: user.username,
-                type: "topup_qr",
-                amount: verifiedAmount,
-                details: `ตรวจสอบผ่าน EasySlip V2 สำเร็จ ยอดโอน ${verifiedAmount} บาท (อ้างอิง: ${transRef}) 🧾 ธนาคาร: ${bankShort} จาก: [${senderName}] ถึง: [${receiverName}]`,
-                status: "success",
-                date: new Date().toISOString()
-              };
-
-              db.transactions.unshift(newTx);
-              saveDB(db);
-
-              return res.json({
-                success: true,
-                amount: verifiedAmount,
-                newBalance: user.balance,
-                message: `ระบบตรวจสอบสลิปสำเร็จผ่าน EasySlip V2! เพิ่มเครดิตให้กับบัญชีเรียบร้อยแล้ว +${verifiedAmount} บาท`
-              });
-            } else {
-              console.warn("EasySlip verification succeeded but verifiedAmount is 0 or could not be parsed. Falling back to Gemini...");
-              easySlipErrorLocal = {
-                errCode: "PARSING_AMOUNT_FAILED",
-                errMsg: "ตรวจสอบสลิปสำเร็จจากเว็บ EasySlip แต่ไม่สามารถแปลงฟิลด์จำนวนเงินได้สำเร็จ",
-                status: 400
-              };
-            }
+          if (rawSlip) {
+            verifiedAmount = typeof data.amountInSlip === "number" ? data.amountInSlip : (rawSlip.amount?.amount || 0);
+            transRef = rawSlip.transRef || "REF-THUNDER-" + Math.floor(100000 + Math.random() * 900000);
+            senderName = rawSlip.sender?.account?.name?.th || rawSlip.sender?.account?.name?.en || "ผู้โอน";
+            receiverName = rawSlip.receiver?.account?.name?.th || rawSlip.receiver?.account?.name?.en || "นาย ธนกฤต ชูกำเนิด";
+            bankShort = rawSlip.sender?.bank?.short || "BANK";
           } else {
-            const errCode = resJson.error?.code || "EASYSLIP_ERROR";
-            const errMsg = resJson.error?.message || "ตรวจสอบสลิปผ่าน EasySlip V2 ไม่สำเร็จ";
-            console.error(`EasySlip API error: Code: ${errCode}, Message: ${errMsg}`);
-            
-            easySlipErrorLocal = {
-              errCode,
-              errMsg,
-              status: easySlipResponse.status || 400
+            verifiedAmount = typeof data.amountInSlip === "number" ? data.amountInSlip : 0;
+            transRef = "REF-THUNDER-" + Math.floor(100000 + Math.random() * 900000);
+            senderName = "ผู้โอน";
+            receiverName = "นาย ธนกฤต ชูกำเนิด";
+          }
+
+          if (verifiedAmount > 0) {
+            // Anti-Double Spend Guard
+            const isDuplicate = db.transactions.some((tx: any) => tx.details && tx.details.includes(transRef));
+            if (isDuplicate) {
+              return res.status(400).json({
+                success: false,
+                error: "สลิปอ้างอิงรายการโอนนี้ได้รับการตรวจสอบและเติมเครดิตเข้าสู่ระบบไปแล้ว ห้ามนำสลิปเก่ามาสแกนซ้ำ"
+              });
+            }
+
+            user.balance = parseFloat((user.balance + verifiedAmount).toFixed(2));
+
+            const newTx: Transaction = {
+              id: "tx-qr-" + Date.now(),
+              userId: user.id,
+              username: user.username,
+              type: "topup_qr",
+              amount: verifiedAmount,
+              details: `ตรวจสอบผ่าน Thunder API สำเร็จ ยอดโอน ${verifiedAmount} บาท (อ้างอิง: ${transRef}) 🧾 ธนาคาร: ${bankShort} จาก: [${senderName}] ถึง: [${receiverName}]`,
+              status: "success",
+              date: new Date().toISOString()
+            };
+
+            db.transactions.unshift(newTx);
+            saveDB(db);
+
+            return res.json({
+              success: true,
+              amount: verifiedAmount,
+              newBalance: user.balance,
+              message: `ระบบตรวจสอบสลิปสำเร็จผ่าน Thunder API! เพิ่มเครดิตให้กับบัญชีเรียบร้อยแล้ว +${verifiedAmount} บาท`
+            });
+          } else {
+            console.warn("Thunder verification succeeded but verifiedAmount is 0 or could not be parsed.");
+            thunderErrorLocal = {
+              errCode: "PARSING_AMOUNT_FAILED",
+              errMsg: "ตรวจสอบสลิปสำเร็จผ่าน Thunder API แต่ไม่สามารถแปลงฟิลด์จำนวนเงินได้สำเร็จ",
+              status: 400
             };
           }
-        } catch (easySlipError: any) {
-          console.error("EasySlip API connection/unhandled error:", easySlipError);
-          easySlipErrorLocal = {
-            errCode: "EASYSLIP_CONNECTION_ERROR",
-            errMsg: easySlipError.message || "ไม่สามารถติดต่อเซิร์ฟเวอร์เช็คสลิปได้ชั่วคราว",
-            status: 500
+        } else {
+          const errCode = resJson.error?.code || "THUNDER_ERROR";
+          const errMsg = resJson.error?.message || "ตรวจสอบสลิปผ่าน Thunder API ไม่สำเร็จ";
+          console.error(`Thunder API error: Code: ${errCode}, Message: ${errMsg}`);
+          
+          thunderErrorLocal = {
+            errCode,
+            errMsg,
+            status: thunderResponse.status || 400
           };
         }
+      } catch (thunderError: any) {
+        console.error("Thunder API connection/unhandled error:", thunderError);
+        thunderErrorLocal = {
+          errCode: "THUNDER_CONNECTION_ERROR",
+          errMsg: thunderError.message || "ไม่สามารถติดต่อเซิร์ฟเวอร์เช็คสลิปได้ชั่วคราว",
+          status: 500
+        };
       }
 
-      // 1.2 Fallback: If EasySlip was failing/pending/errored and Gemini is available, verify using Gemini OCR Vision
+      // 1.2 Fallback: If your custom API is not configured or fails, verify using Gemini OCR Vision as a powerful backup plan
       if (process.env.GEMINI_API_KEY) {
         try {
           console.log("Attempting to fallback and verify bank slip using Gemini AI OCR...");
@@ -857,18 +852,18 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
           }
         } catch (geminiError: any) {
           console.error("Gemini slip validation error:", geminiError);
-          // Fallback to reporting the original EasySlip error if Gemini connection/parsing failed
-          if (easySlipErrorLocal) {
-            return res.status(easySlipErrorLocal.status).json({
+          // Fallback to reporting the original Thunder error if Gemini connection/parsing failed
+          if (thunderErrorLocal) {
+            return res.status(thunderErrorLocal.status).json({
               success: false,
-              error: `ไม่สามารถอนุมัติสลิปนี้ได้ (${easySlipErrorLocal.errCode}): ${easySlipErrorLocal.errMsg} (และรหัส AI มีการตรวจสอบขัดข้องชั่วคราว)`
+              error: `ไม่สามารถอนุมัติสลิปนี้ได้ (${thunderErrorLocal.errCode}): ${thunderErrorLocal.errMsg} (และรหัส AI มีการตรวจสอบขัดข้องชั่วคราว)`
             });
           }
         }
       }
 
-      // If we got here and the request was an actual file transfer slip, but both EasySlip and Gemini failed to return success, return error.
-      const lastErr = easySlipErrorLocal || { errCode: "VERIFICATION_FAILED", errMsg: "ข้อมูลรูปภาพสลิปที่แนบมาไม่สมบูรณ์ หรือสแกนตรวจธุรกรรมออนไลน์ไม่สำเร็จ โอนช่วงเวลาปิดระบบของธนาคารหรือบัญชีปลายทางไม่ถูกต้อง", status: 400 };
+      // If we got here and the request was an actual file transfer slip, but both Thunder and Gemini failed to return success, return error.
+      const lastErr = thunderErrorLocal || { errCode: "VERIFICATION_FAILED", errMsg: "ข้อมูลรูปภาพสลิปที่แนบมาไม่สมบูรณ์ หรือสแกนตรวจธุรกรรมออนไลน์ไม่สำเร็จ โอนช่วงเวลาปิดระบบของธนาคารหรือบัญชีปลายทางไม่ถูกต้อง", status: 400 };
       return res.status(lastErr.status).json({
         success: false,
         error: `ตรวจสอบข้อมูลสลิปไม่สำเร็จ (${lastErr.errCode}): ${lastErr.errMsg}`
