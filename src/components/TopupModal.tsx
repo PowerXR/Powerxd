@@ -205,7 +205,7 @@ export default function TopupModal({
         <div className="flex items-center justify-between pb-3 border-b border-[#8E6D4E]/10 relative flex-shrink-0">
           <div className="flex items-center gap-2">
             <Heart size={18} className="text-[#8E6D4E] fill-current" />
-            <h3 className="font-serif font-bold text-[#4E3B2C] dark:text-[#EAE3DA] text-base">ระบบสนับสนุนมงคลศิลป์ชุมชน</h3>
+            <h3 className="font-serif font-bold text-[#4E3B2C] dark:text-[#EAE3DA] text-base">เติมเงินผ่านบัญชีธนาคารอัตโนมัติ</h3>
           </div>
           <button 
             onClick={onClose}
@@ -228,7 +228,7 @@ export default function TopupModal({
                 <span>ขั้นตอนการสแกนสลิป (รับยอดทันที)</span>
               </span>
               <ol className="text-[10.5px] space-y-1.5 pl-4 list-decimal leading-relaxed font-light">
-                <li>คัดลอกเลขบัญชีธนาคาร <strong>กสิกรไทย</strong> ของบัญชีทางเทศบาลที่กำหนดใว้</li>
+                <li>คัดลอกเลขบัญชีธนาคาร <strong>กรุงเทพ</strong> ของบัญชีทางเทศบาลที่กำหนดใว้</li>
                 <li>เมื่อผู้ใช้ทำการโอนแล้ว โปรดแนบรูปสลิปการโอนของท่าน เพื่อให้ระบบตรวจสอบและเติมเงินให้โดยอัตโนมัติ</li>
                 <li>หากผู้ใช้แนบสลิปแล้วไม่ผ่านหรือติดปัญหาอะไรโปรดแจ้งทางเทศบาลเพื่อทำการเติมเงินให้โดยเร็ว!!!</li>
               </ol>
@@ -260,21 +260,21 @@ export default function TopupModal({
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-bold text-[#4E3B2C] dark:text-stone-100 tracking-wider font-mono">
-                          {settings.bankAccountNumber || "105-1-91583-2"}
+                          {settings.bankAccountNumber || "9770964014"}
                         </span>
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-extrabold flex-shrink-0">
                           {copiedBank ? "ก็อปแล้ว" : "คัดลอก"}
                         </span>
                       </div>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">
-                        {settings.bankAccountName || "กลุ่มวิสาหกิจชุมชนน้ำน้อย Thanakrit Chokumnerd"}
+                        {settings.bankAccountName || "ธนกฤต ชูกำเนิด"}
                       </p>
                     </div>
                   </div>
 
                   <div className="text-right flex-shrink-0 hidden sm:block">
                     <span className="text-[10px] font-bold text-emerald-600 block">
-                      {settings.bankName || "กสิกรไทย"}
+                      {settings.bankName || "กรุงเทพ"}
                     </span>
                     <span className="text-[8px] text-stone-400 block mt-0.5">โอนบัญชีนี้เท่านั้น</span>
                   </div>

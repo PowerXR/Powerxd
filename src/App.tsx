@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { AppSettings, Category, Product, User, Coupon, Transaction, Review } from "./types";
+import { Language, getTranslation } from "./lib/translations";
 import Header from "./components/Header";
 import Banners from "./components/Banners";
 import CategoriesAndProducts from "./components/CategoriesAndProducts";
@@ -19,6 +20,14 @@ import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
   // Store stateful models
+  const [lang, setLang] = useState<Language>(() => {
+    return (localStorage.getItem("lang") as Language) || "th";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("lang", lang);
+  }, [lang]);
+
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -131,8 +140,8 @@ export default function App() {
 
     // Simulate sweetalert login greet
     triggerSwal(
-      `ยินดีต้อนรับกลับคุณ ${loggedInUser.username}!`,
-      `เข้าสู่ระบบด้วยบทบาท ${loggedInUser.role === 'admin' ? '🛡️ ผู้ดูแลร้าน' : '👤 สมาชิกปกติ'} สำเร็จเรียบร้อย มุ่งสู่การเลือกซื้อคีย์ไอเท็ม`,
+      getTranslation(lang, "loginWelcome").replace("{username}", loggedInUser.username),
+      getTranslation(lang, "loginSuccessMsg").replace("{role}", loggedInUser.role === 'admin' ? getTranslation(lang, "roleAdmin") : getTranslation(lang, "roleMember")),
       "success"
     );
     loadStoreData();
@@ -141,7 +150,11 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem("userId");
-    triggerSwal("ออกจากระบบเรียบร้อย", "หวังว่าคุณจะกลับมาใช้บริการร้านเราอีกในเร็วๆ นี้!", "success");
+    triggerSwal(
+      getTranslation(lang, "logoutSuccess"),
+      getTranslation(lang, "logoutMsg"),
+      "success"
+    );
   };
 
   // Simulated SweetAlert notifier
@@ -168,13 +181,21 @@ export default function App() {
       });
       const text = await resp.text();
       if (!text || text.trim().startsWith("<")) {
-        triggerSwal("ขัดข้อง!", "เซิร์ฟเวอร์ส่งการตอบสนองที่ไม่ถูกต้อง (HTML)", "error");
+        triggerSwal(
+          getTranslation(lang, "errorTitle"),
+          getTranslation(lang, "errorHtmlResp"),
+          "error"
+        );
         return { success: false };
       }
       const data = JSON.parse(text);
 
       if (!resp.ok) {
-        triggerSwal("รายการล้มเหลว!", data.error || "ไม่สามารถทำรายการได้", "error");
+        triggerSwal(
+          getTranslation(lang, "purchaseFailed"),
+          data.error || getTranslation(lang, "purchaseFailedDesc"),
+          "error"
+        );
         return { success: false };
       }
 
@@ -184,15 +205,19 @@ export default function App() {
 
       // Show outcome SweetAlert delivery box
       triggerSwal(
-        data.title || "ชำระเงินสำเร็จ!", 
-        `คุณได้สั่งซื้อและตัดยอดเงิน ${data.paidAmount} บาท คงเหลือคงคลังปรับลดแล้ว รายการสต็อกที่รับจัดส่ง:`,
+        data.title || getTranslation(lang, "purchaseSuccess"), 
+        getTranslation(lang, "purchaseSuccessMsg").replace("{amount}", String(data.paidAmount)),
         "success",
         data.data
       );
 
       return { success: true };
     } catch (e) {
-      triggerSwal("ขัดข้อง!", "เกิดความผิดพลาดในการส่งถ่ายข้อมูลซื้อ", "error");
+      triggerSwal(
+        getTranslation(lang, "errorTitle"),
+        getTranslation(lang, "errorPost"),
+        "error"
+      );
       return { success: false };
     }
   };
@@ -204,8 +229,10 @@ export default function App() {
     }
     setTopupModalOpen(false);
     triggerSwal(
-      "เติมเครดิตเสร็จสมบูรณ์! 🎉",
-      `ขอบคุณที่เติมเงินกับร้านค้า ยอดโอนส่งตรวจ +${amount} ฿ ได้รับการเพิ่มเข้ากระเป๋าตังเรียบร้อย ยอดคงเหลือปัจจุบัน: ${newBalance} ฿`,
+      getTranslation(lang, "topupSuccessTitle"),
+      getTranslation(lang, "topupSuccessMsg")
+        .replace("{amount}", String(amount))
+        .replace("{balance}", String(newBalance)),
       "success"
     );
     loadStoreData();
@@ -451,6 +478,8 @@ export default function App() {
             onOpenAdmin={() => setAdminPanelOpen(true)}
             onOpenHistory={() => setHistoryModalOpen(true)}
             onLogout={handleLogout}
+            lang={lang}
+            setLang={setLang}
           />
 
           {/* Banner Slider */}
@@ -479,10 +508,10 @@ export default function App() {
                   {/* Middle Text Content */}
                   <div className="flex-1 space-y-2 text-left">
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8E6D4E]/10 border border-[#8E6D4E]/20 text-[10px] tracking-widest uppercase font-black text-[#8E6D4E]">
-                      📢 บอร์ดข่าวสารและประกาศประชาสัมพันธ์ร้านค้า
+                      {lang === "th" ? "📢 บอร์ดข่าวสารและประกาศประชาสัมพันธ์ร้านค้า" : lang === "zh" ? "📢 社区公告及资讯看板" : "📢 ANNOUNCEMENTS & INFORMATION"}
                     </div>
                     <h3 className="text-lg sm:text-xl font-serif font-black text-[#4E3B2C] dark:text-[#E2C7A9] tracking-tight">
-                      {settings.announcementTitle || "ยินดีต้อนรับสู่เว็บหัตถศิลป์ชุมชน"}
+                      {settings.announcementTitle || (lang === "th" ? "ยินดีต้อนรับสู่เว็บหัตถศิลป์ชุมชน" : lang === "zh" ? "欢迎来到喃内文创非遗社区" : "Welcome to Nam Noi Cultural Crafts")}
                     </h3>
                     <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-light leading-relaxed whitespace-pre-wrap">
                       {settings.announcementBody}
@@ -510,6 +539,7 @@ export default function App() {
             products={products}
             settings={settings}
             onSelectProduct={(p) => setSelectedProduct(p)}
+            lang={lang}
           />
 
           {/* About Us Section */}
@@ -518,14 +548,14 @@ export default function App() {
               <div className="lg:col-span-5 space-y-4">
                 <div className="inline-flex items-center gap-1.5 text-[10px] text-[#8E6D4E] uppercase tracking-widest font-extrabold">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#8E6D4E]"></span>
-                  <span>เกี่ยวกับเรา & วิสัยทัศน์</span>
+                  <span>{getTranslation(lang, "aboutUs")}</span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-serif font-black text-[#4E3B2C] dark:text-[#E2C7A9] tracking-tight leading-tight">
-                  {settings.aboutUsTitle || "วิถีหัตถศิลป์ ชุมชนตำบลน้ำน้อย"}
+                  {lang === "th" && settings.aboutUsTitle ? settings.aboutUsTitle : getTranslation(lang, "aboutUsTitle")}
                 </h3>
                 <div className="w-12 h-1 bg-[#8E6D4E] rounded"></div>
                 <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-light leading-relaxed whitespace-pre-wrap">
-                  {settings.aboutUsBody || "ตำบลน้ำน้อย อำเภอหาดใหญ่ จังหวัดสงขลา เป็นดินแดนที่มีประวัติศาสตร์และภูมิปัญญาพื้นบ้านที่สืบทอดกันมาหลายชั่วอายุคน โดยเฉพาะกลุ่มงานหัตถศิลป์ทอผ้าบาติกเขียนลายโบราณ และการจักสานใบลานที่มีความโดดเด่นเป็นเอกลักษณ์ ผลิตภัณฑ์ทุกชิ้นของเราไม่ได้เป็นเพียงสินค้าทั่วไป แต่เป็นตัวแทนความภาคภูมิใจ ความประณีต และการรักษามรดกทางวัฒนธรรมท้องถิ่นให้อยู่คู่วิถีไทยสืบไป"}
+                  {lang === "th" && settings.aboutUsBody ? settings.aboutUsBody : getTranslation(lang, "aboutUsBody")}
                 </p>
               </div>
 
@@ -550,10 +580,10 @@ export default function App() {
                 MASTERPIECE GALLERY
               </span>
               <h3 className="text-2xl sm:text-3xl font-serif font-semibold text-[#4E3B2C] dark:text-[#E2C7A9]">
-                แฟ้มสะสมผลงานหัตถศิลป์ล้ำค่า
+                {getTranslation(lang, "portfoliosTitle")}
               </h3>
               <p className="text-xs text-stone-500 max-w-lg mx-auto font-light">
-                รวมที่สุดแห่งผลงานศิลปหัตถกรรม ผลงานสั่งทำพิเศษ และมรดกทางปัญญาจากช่างฝีมือชั้นครูแห่งลุ่มน้ำน้อย
+                {getTranslation(lang, "portfoliosSub")}
               </p>
               <div className="w-16 h-0.5 bg-[#8E6D4E] mx-auto mt-2"></div>
             </div>
@@ -586,7 +616,7 @@ export default function App() {
               ))}
               {(settings.portfolios || []).length === 0 && (
                 <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-12 bg-[#FAF7F2]/50 dark:bg-[#161311] rounded-2xl border border-dashed border-[#8E6D4E]/20 text-stone-500 text-xs">
-                  ยังไม่มีข้อมูลแฟ้มผลงานศิลปหัตถกรรมในขณะนี้
+                  {getTranslation(lang, "emptyPortfolios")}
                 </div>
               )}
             </div>
@@ -599,10 +629,10 @@ export default function App() {
                 OUR CRAFTSMEN
               </span>
               <h3 className="text-2xl sm:text-3xl font-serif font-semibold text-[#4E3B2C] dark:text-[#E2C7A9]">
-                ทำเนียบปราชญ์ท้องถิ่นและช่างฝีมือชั้นครู
+                {getTranslation(lang, "artisansTitle")}
               </h3>
               <p className="text-xs text-stone-500 max-w-lg mx-auto font-light">
-                ผู้สืบสาน เติมแต่ง และส่งต่อองค์ความรู้ภูมิปัญญาพื้นบ้านตำบลน้ำน้อยจากรุ่นสู่รุ่นเพื่อคุณค่าที่ยั่งยืน
+                {getTranslation(lang, "artisansSub")}
               </p>
               <div className="w-16 h-0.5 bg-[#8E6D4E] mx-auto mt-2"></div>
             </div>
@@ -638,7 +668,7 @@ export default function App() {
               ))}
               {(settings.artisans || []).length === 0 && (
                 <div className="col-span-1 md:col-span-2 text-center py-12 bg-[#FAF7F2]/50 dark:bg-[#161311] rounded-2xl border border-dashed border-[#8E6D4E]/20 text-stone-500 text-xs">
-                  ยังไม่มีข้อมูลในทำเนียบช่างฝีมือขณะนี้
+                  {getTranslation(lang, "emptyArtisans")}
                 </div>
               )}
             </div>
@@ -650,11 +680,11 @@ export default function App() {
               <div className="space-y-2 max-w-xl text-center md:text-left">
                 <span className="text-[10px] text-[#8E6D4E] uppercase tracking-widest font-extrabold flex items-center justify-center md:justify-start gap-1">
                   <ShieldCheck size={14} className="text-[#8E6D4E]" />
-                  <span>ระบบวิสาหกิจและภูมิปัญญาสัมมาชีพ</span>
+                  <span>{getTranslation(lang, "statsSystem")}</span>
                 </span>
-                <h4 className="text-xl font-serif font-semibold text-[#4E3B2C] dark:text-[#E2C7A9]">ต้องการร่วมสัมผัสและสืบสานวิถีชุมชนน้ำน้อยด้วยตนเอง?</h4>
+                <h4 className="text-xl font-serif font-semibold text-[#4E3B2C] dark:text-[#E2C7A9]">{getTranslation(lang, "statsQuestion")}</h4>
                 <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed font-light">
-                  ตำบลน้ำน้อย อำเภอหาดใหญ่ เปิดต้อนรับการศึกษาดูงานจากโรงเรียน สถาบันอุดมศึกษา และนักท่องเที่ยวเชิงอนุรักษ์ทุกท่าน โดยกลุ่มทอผ้าบาติกและจักสานใบลานของเราจัดคลาสเวิร์กชอปสาธิตฟรีโดยไม่มีค่าใช้จ่ายเพิ่มเติม
+                  {getTranslation(lang, "statsBody")}
                 </p>
               </div>
 
@@ -666,7 +696,7 @@ export default function App() {
                   className="bg-[#8E6D4E] hover:bg-[#725437] text-white font-bold text-xs px-5 py-3.5 rounded-xl transition-all hover:scale-[1.02] flex items-center gap-1.5 shadow"
                 >
                   <Mail size={13} />
-                  <span>จองคิวศึกษาดูงานฟรี</span>
+                  <span>{getTranslation(lang, "statsReserveBtn")}</span>
                 </a>
                 <a 
                   href="https://maps.google.com/?q=ตำบลน้ำน้อย+หาดใหญ่" 
@@ -674,7 +704,7 @@ export default function App() {
                   rel="noreferrer"
                   className="bg-white dark:bg-[#151210] text-[#735A45] dark:text-stone-300 hover:text-[#8E6D4E] border border-[#8E6D4E]/35 text-xs font-bold px-5 py-3.5 rounded-xl transition-all flex items-center gap-1"
                 >
-                  <span>แชร์พิกัดนำทางตำบล</span>
+                  <span>{getTranslation(lang, "statsLocBtn")}</span>
                   <ArrowUpRight size={13} />
                 </a>
               </div>
@@ -682,7 +712,7 @@ export default function App() {
           </section>
 
           {/* Interactive Map of Nam Noi Subdistrict Municipality */}
-          <NamNoiMap />
+          <NamNoiMap settings={settings} lang={lang} />
 
           {/* Footer of Shop */}
           <footer className="border-t border-[#8E6D4E]/15 bg-[#FAF7F2] dark:bg-[#141210] py-14 mt-20 text-[#4E3B2C] dark:text-stone-300">
@@ -691,21 +721,30 @@ export default function App() {
                 <div className="md:col-span-6 space-y-3">
                   <h3 className="text-lg font-serif font-bold tracking-wide text-[#8E6D4E]">{settings.siteName}</h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400 max-w-md leading-relaxed font-light">
-                    แพลตฟอร์มเผยแพร่หัตถกร ช่างสิบหมู่ และหัตถศิลป์ OTOP ประจำเทศบาลตำบลน้ำน้อย อำเภอหาดใหญ่ จังหวัดสงขลา มุ่งสร้างสรรค์งานทำมือแท้ให้สอดรับกับการขยายตัวทางอาชีพอย่างยั่งยืน
+                    {lang === "th" 
+                      ? "แพลตฟอร์มเผยแพร่หัตถกร ช่างสิบหมู่ และหัตถศิลป์ OTOP ประจำเทศบาลตำบลน้ำน้อย อำเภอหาดใหญ่ จังหวัดสงขลา มุ่งสร้างสรรค์งานทำมือแท้ให้สอดรับกับการขยายตัวทางอาชีพอย่างยั่งยืน" 
+                      : lang === "zh"
+                        ? "宋卡府合艾郡喃内区市政厅非遗特色文创、手工艺与 OTOP 数字化推广平台，致力于保护传统手作、促进社区就业可持续增长。"
+                        : "Digital promotion platform for Intangible Cultural Heritage crafts, Master Artisans, and OTOP works under the Nam Noi Subdistrict Municipality, Hat Yai, Songkhla."
+                    }
                   </p>
                 </div>
 
                 <div className="md:col-span-3 space-y-3">
-                  <h4 className="text-xs uppercase tracking-wider font-semibold text-[#8E6D4E]">ลิงก์นำทาง</h4>
+                  <h4 className="text-xs uppercase tracking-wider font-semibold text-[#8E6D4E]">
+                    {lang === "th" ? "ลิงก์นำทาง" : lang === "zh" ? "导航" : "Navigation"}
+                  </h4>
                   <ul className="text-xs space-y-2 text-stone-500 dark:text-stone-400 font-light">
-                    <li><a href="#homepage" className="hover:text-[#8E6D4E]">หน้าแรก / ข้อมูลเว็ปไซต์</a></li>
-                    <li><a href="#recommended-products" className="hover:text-[#8E6D4E]">ผลิตภัณฑ์ทำมือชุมชน</a></li>
-                    <li><button onClick={() => { setAuthModalType("login"); setAuthModalOpen(true); }} className="hover:text-[#8E6D4E] text-left cursor-pointer">เข้าสู่ระบบสมาชิก</button></li>
+                    <li><a href="#homepage" className="hover:text-[#8E6D4E]">{getTranslation(lang, "home")}</a></li>
+                    <li><a href="#recommended-products" className="hover:text-[#8E6D4E]">{getTranslation(lang, "products")}</a></li>
+                    <li><button onClick={() => { setAuthModalType("login"); setAuthModalOpen(true); }} className="hover:text-[#8E6D4E] text-left cursor-pointer">{getTranslation(lang, "login")}</button></li>
                   </ul>
                 </div>
 
                 <div className="md:col-span-3 space-y-3">
-                  <h4 className="text-xs uppercase tracking-wider font-semibold text-[#8E6D4E]">ช่องทางสนับสนุน</h4>
+                  <h4 className="text-xs uppercase tracking-wider font-semibold text-[#8E6D4E]">
+                    {lang === "th" ? "ช่องทางสนับสนุน" : lang === "zh" ? "社交网络" : "Social Network"}
+                  </h4>
                   <div className="flex items-center gap-3">
                     <a href={settings.contactFacebook} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#8E6D4E]/10 hover:bg-[#8E6D4E] text-[#8E6D4E] hover:text-white transition-all flex items-center justify-center text-xs font-bold shadow-sm">
                       FB
@@ -721,10 +760,12 @@ export default function App() {
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-[#8E6D4E]/10 pt-8 gap-4 text-[11px] text-stone-400 dark:text-stone-500">
-                <p>© 2026 {settings.siteName}. สงวนลิขสิทธิ์ข้อมูลสาธารณประโยชน์เชิงวัฒนธรรม วิสาหกิจรวมกลุ่มตำบลน้ำน้อย</p>
+                <p>© 2026 {settings.siteName}. {getTranslation(lang, "footerRights")}</p>
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-mono text-[10px]">ระบบอุดหนุนแบบปลอดภัยสูง</span>
+                  <span className="font-mono text-[10px]">
+                    {lang === "th" ? "ระบบอุดหนุนแบบปลอดภัยสูง" : lang === "zh" ? "高安全赞助与结算系统" : "Secure Patronage & Checkout System"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -810,7 +851,7 @@ export default function App() {
                     }}
                     className="absolute top-4 right-4 p-2.5 rounded-full bg-stone-500/10 hover:bg-[#8E6D4E]/15 text-[#4E3B2C] dark:text-stone-300 transition-colors cursor-pointer z-20"
                   >
-                    <span className="sr-only">ปิด</span>
+                    <span className="sr-only">{getTranslation(lang, "close")}</span>
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -831,11 +872,11 @@ export default function App() {
                   {/* Text Contents */}
                   <div className="p-8 text-center space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#8E6D4E]/10 border border-[#8E6D4E]/20 text-[10px] tracking-widest uppercase font-black text-[#8E6D4E]">
-                      📢 ข่าวสารและประกาศจากเทศบาล
+                      {lang === "th" ? "📢 ข่าวสารและประกาศจากเทศบาล" : lang === "zh" ? "📢 市政厅公告与资讯" : "📢 MUNICIPAL NEWS & ANNOUNCEMENTS"}
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl font-serif text-[#4E3B2C] dark:text-[#E2C7A9] tracking-tight leading-tight font-bold">
-                      {settings.announcementTitle || "ยินดีต้อนรับสู่ร้านค้าชุมชน"}
+                      {settings.announcementTitle || (lang === "th" ? "ยินดีต้อนรับสู่ร้านค้าชุมชน" : lang === "zh" ? "欢迎来到喃内文创非遗社区" : "Welcome to Nam Noi Cultural Crafts")}
                     </h3>
 
                     <div className="text-xs sm:text-sm text-slate-600 dark:text-stone-300 leading-relaxed font-light whitespace-pre-wrap max-h-48 overflow-y-auto pr-1 scrollbar-thin">
@@ -851,7 +892,7 @@ export default function App() {
                         }}
                         className="w-full sm:w-auto px-10 py-3.5 rounded-2xl bg-[#8E6D4E] hover:bg-[#725437] text-white text-xs font-bold transition-all duration-300 shadow-lg shadow-[#8E6D4E]/15 cursor-pointer active:scale-95 hover:scale-[1.02]"
                       >
-                        รับทราบและเข้าสู่เว็บไซต์
+                        {lang === "th" ? "รับทราบและเข้าสู่เว็บไซต์" : lang === "zh" ? "确认并进入网站" : "Acknowledge and Enter Site"}
                       </button>
                     </div>
                   </div>
@@ -889,12 +930,14 @@ export default function App() {
                   {/* Delivered Product / Key details zone (extremely useful for gamer stores) */}
                   {swalAlert.deliveredData && (
                     <div className="relative text-left rounded-xl bg-[#0A0A0B] p-3.5 border border-white/10 space-y-1 select-all selection:bg-red-500/20 font-mono text-[10.5px]">
-                      <span className="text-[9.5px] uppercase font-bold text-slate-500 block mb-1">รหัสสินค้าทีได้รับจัดส่ง:</span>
+                      <span className="text-[9.5px] uppercase font-bold text-slate-500 block mb-1">
+                        {lang === "th" ? "รหัสสินค้าที่ได้รับจัดส่ง:" : lang === "zh" ? "已配送的产品兑换凭证码:" : "Delivered product redemption keys:"}
+                      </span>
                       <pre className="text-amber-400 font-bold break-all whitespace-pre-line">{swalAlert.deliveredData}</pre>
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(swalAlert.deliveredData || "");
-                          alert("คัดลอกรหัสสินค้าไปใช้เสร็จสมบูรณ์!");
+                          alert(getTranslation(lang, "copiedNotify"));
                         }}
                         className="absolute top-2.5 right-2.5 p-1 rounded-md bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
                         title="Copy code"
@@ -908,7 +951,7 @@ export default function App() {
                     onClick={() => setSwalAlert(null)}
                     className="w-full py-2.5 bg-[#16161A] border border-white/10 hover:bg-[#1C1C22] text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
                   >
-                    ตกลง ยืนยัน
+                    {lang === "th" ? "ตกลง ยืนยัน" : lang === "zh" ? "确认" : "OK, Confirm"}
                   </button>
                 </motion.div>
               </div>

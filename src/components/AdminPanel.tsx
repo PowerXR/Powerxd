@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { AppSettings, Category, Product, User, Coupon, Transaction, Review } from "../types";
+import { AppSettings, Category, Product, User, Coupon, Transaction, Review, Landmark } from "../types";
 import LucideIcon from "./LucideIcon";
 import { 
-  X, LayoutDashboard, Database, FolderHeart, Settings, Ticket, Code, Plus, Edit, Trash, Users, Percent, Gift, FileText, Check, Copy, HelpCircle, Eye, RefreshCw, Truck, Info, Palette, Award
+  X, LayoutDashboard, Database, FolderHeart, Settings, Ticket, Code, Plus, Edit, Trash, Users, Percent, Gift, FileText, Check, Copy, HelpCircle, Eye, RefreshCw, Truck, Info, Palette, Award,
+  Map as MapIcon, Compass, Trees, Building, Sparkles
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -131,7 +132,7 @@ export default function AdminPanel({
   onUpdateSettings,
   onRefreshData
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "categories" | "coupons" | "users" | "settings" | "php-exporter" | "orders" | "about-us" | "portfolios" | "artisans">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "categories" | "coupons" | "users" | "settings" | "php-exporter" | "orders" | "about-us" | "portfolios" | "artisans" | "landmarks">("dashboard");
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -251,6 +252,27 @@ export default function AdminPanel({
     name: "",
     expertise: "",
     bio: "",
+    imageUrl: ""
+  });
+
+  // Landmark/Map management states
+  const [showLandmarkForm, setShowLandmarkForm] = useState(false);
+  const [editingLandmarkId, setEditingLandmarkId] = useState<string | null>(null);
+  const [landmarkForm, setLandmarkForm] = useState<{
+    name: string;
+    type: 'admin' | 'craft' | 'temple' | 'nature' | 'market';
+    lat: number;
+    lng: number;
+    description: string;
+    phone?: string;
+    imageUrl: string;
+  }>({
+    name: "",
+    type: "craft",
+    lat: 7.0518,
+    lng: 100.5285,
+    description: "",
+    phone: "",
     imageUrl: ""
   });
 
@@ -577,6 +599,58 @@ export default function AdminPanel({
     });
   };
 
+  // Landmark/Map action handlers
+  const handleLandmarkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      let updatedLandmarks = [...(editedSettings.landmarks || [])];
+      if (editingLandmarkId) {
+        // Edit existing
+        updatedLandmarks = updatedLandmarks.map(l => 
+          l.id === editingLandmarkId ? { ...l, ...landmarkForm } : l
+        );
+      } else {
+        // Add new
+        const newLandmark = {
+          id: `loc-${Date.now()}`,
+          ...landmarkForm
+        };
+        updatedLandmarks.push(newLandmark);
+      }
+      
+      const newSettings = { ...editedSettings, landmarks: updatedLandmarks };
+      setEditedSettings(newSettings);
+      await onUpdateSettings(newSettings);
+      
+      // Reset form
+      setLandmarkForm({ name: "", type: "craft", lat: 7.0518, lng: 100.5285, description: "", phone: "", imageUrl: "" });
+      setEditingLandmarkId(null);
+      setShowLandmarkForm(false);
+      showCustomAlert("สำเร็จ", "บันทึกข้อมูลพิกัดสถานที่เรียบร้อยแล้วค่ะ!", "success");
+    } catch (err) {
+      showCustomAlert("เกิดข้อผิดพลาด", "เกิดข้อผิดพลาดในการบันทึกข้อมูลพิกัดสถานที่", "error");
+    }
+  };
+
+  const handleDeleteLandmark = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "ยืนยันการลบลำดับพิกัดสถานที่",
+      message: "คุณต้องการลบข้อมูลสถานที่แนะนำทางวัฒนธรรมแห่งนี้ออกจากแผนที่ใช่หรือไม่?",
+      onConfirm: async () => {
+        try {
+          const updatedLandmarks = (editedSettings.landmarks || []).filter(l => l.id !== id);
+          const newSettings = { ...editedSettings, landmarks: updatedLandmarks };
+          setEditedSettings(newSettings);
+          await onUpdateSettings(newSettings);
+          showCustomAlert("สำเร็จ", "ลบพิกัดสถานที่เรียบร้อยแล้วค่ะ!", "success");
+        } catch (err) {
+          showCustomAlert("เกิดข้อผิดพลาด", "เกิดข้อผิดพลาดในการลบพิกัดสถานที่", "error");
+        }
+      }
+    });
+  };
+
   // Product actions handler
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -883,6 +957,15 @@ export default function AdminPanel({
             >
               <Award size={14} />
               <span>จัดการช่างฝีมือ</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("landmarks")}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+                activeTab === "landmarks" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <MapIcon size={14} className={activeTab === "landmarks" ? "text-amber-500" : "text-slate-400"} />
+              <span>จัดการแผนที่แนะนำ</span>
             </button>
             <button
               onClick={() => setActiveTab("settings")}
@@ -1796,6 +1879,212 @@ export default function AdminPanel({
                     {(editedSettings.artisans || []).length === 0 && (
                       <div className="col-span-2 text-center py-10 bg-slate-950/10 border border-dashed border-white/5 rounded-2xl text-slate-500">
                         ยังไม่มีข้อมูลทำเนียบช่างฝีมือในระบบหลังบ้านค่ะ
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* T_landmarks: Landmark/Map Directory */}
+            {activeTab === "landmarks" && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <MapIcon className="text-amber-500" size={16} />
+                      <span>ตั้งค่าจุดปักหมุด แหล่งท่องเที่ยววัฒนธรรมและภูมิปัญญาตำบลน้ำน้อย</span>
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-light mt-1">
+                      เพิ่ม ลบ หรือแก้ไขจุดเช็กอิน/สถานที่สำคัญทางประวัติศาสตร์เพื่อนำเสนอในหน้าแผนที่หลักของเว็บบอร์ด
+                    </p>
+                  </div>
+                  {!showLandmarkForm && (
+                    <button
+                      onClick={() => {
+                        setLandmarkForm({ name: "", type: "craft", lat: 7.0518, lng: 100.5285, description: "", phone: "", imageUrl: "" });
+                        setEditingLandmarkId(null);
+                        setShowLandmarkForm(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-400 text-slate-950 font-bold rounded-lg text-[10px] hover:opacity-95 transition-all self-start sm:self-center cursor-pointer"
+                    >
+                      <Plus size={12} />
+                      <span>เพิ่มจุดปักหมุดใหม่</span>
+                    </button>
+                  )}
+                </div>
+
+                {showLandmarkForm ? (
+                  <form onSubmit={handleLandmarkSubmit} className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-4">
+                    <div className="font-bold text-xs text-white pb-2 border-b border-white/5">
+                      {editingLandmarkId ? "✍️ แก้ไขข้อมูลจุดปักหมุดสถานที่" : "✨ เพิ่มจุดปักหมุดใหม่บนแผนที่"}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3.5">
+                        <div>
+                          <label className="block mb-1 text-[10px] text-slate-400 font-bold">ชื่อสถานที่ / แหล่งวัฒนธรรม *</label>
+                          <input 
+                            type="text" 
+                            required 
+                            value={landmarkForm.name} 
+                            onChange={e => setLandmarkForm({...landmarkForm, name: e.target.value})} 
+                            className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white" 
+                            placeholder="เช่น สำนักงานเทศบาลตำบลน้ำน้อย"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400 font-bold">ประเภทสถานที่ *</label>
+                            <select 
+                              value={landmarkForm.type} 
+                              onChange={e => setLandmarkForm({...landmarkForm, type: e.target.value as any})} 
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white text-xs"
+                            >
+                              <option value="admin">สถานที่ราชการ (Blue)</option>
+                              <option value="craft">แหล่งงานหัตถกรรม/ช่างฝีมือ (Amber)</option>
+                              <option value="temple">ศาสนสถาน/โบราณสถาน (Red)</option>
+                              <option value="nature">แหล่งท่องเที่ยวธรรมชาติ (Emerald)</option>
+                              <option value="market">ตลาด/ร้านค้าชุมชน (Purple)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400 font-bold">เบอร์ติดต่อประสานงาน (ถ้ามี)</label>
+                            <input 
+                              type="text" 
+                              value={landmarkForm.phone || ""} 
+                              onChange={e => setLandmarkForm({...landmarkForm, phone: e.target.value})} 
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white" 
+                              placeholder="เช่น 074-211111"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400 font-bold">องศาทศนิยม ละติจูด (Latitude) *</label>
+                            <input 
+                              type="number" 
+                              step="any"
+                              required 
+                              value={landmarkForm.lat} 
+                              onChange={e => setLandmarkForm({...landmarkForm, lat: parseFloat(e.target.value) || 0})} 
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white" 
+                              placeholder="เช่น 7.0518"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400 font-bold">องศาทศนิยม ลองจิจูด (Longitude) *</label>
+                            <input 
+                              type="number" 
+                              step="any"
+                              required 
+                              value={landmarkForm.lng} 
+                              onChange={e => setLandmarkForm({...landmarkForm, lng: parseFloat(e.target.value) || 0})} 
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white" 
+                              placeholder="เช่น 100.5285"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block mb-1 text-[10px] text-slate-400 font-bold">รายละเอียดสำคัญ / จุดขายเด่นของสถานที่ *</label>
+                          <textarea 
+                            required 
+                            rows={4}
+                            value={landmarkForm.description} 
+                            onChange={e => setLandmarkForm({...landmarkForm, description: e.target.value})} 
+                            className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white font-light" 
+                            placeholder="อธิบายกิจกรรมหลัก สิ่งที่นักท่องเที่ยวจะได้รับ หรือประวัติย่อสำคัญ..."
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <ImageUploader 
+                          label="รูปภาพสถานที่สำคัญ (Landmark Image) *"
+                          value={landmarkForm.imageUrl}
+                          onChange={url => setLandmarkForm({...landmarkForm, imageUrl: url})}
+                          placeholder="ใส่ลิงก์รูปภาพ หรือกดอัปโหลดไฟล์..."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-end border-t border-white/5 pt-3.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowLandmarkForm(false);
+                          setEditingLandmarkId(null);
+                        }}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-bold cursor-pointer"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-400 text-slate-950 font-bold rounded-lg text-[11px] hover:opacity-95 transition-all cursor-pointer"
+                      >
+                        {editingLandmarkId ? "บันทึกการแก้ไข" : "เพิ่มพิกัดสถานที่"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {(editedSettings.landmarks || []).map((loc) => (
+                      <div key={loc.id} className="bg-slate-950/40 p-3 rounded-2xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-all">
+                        {loc.imageUrl ? (
+                          <img src={loc.imageUrl} alt={loc.name} className="w-24 h-24 object-cover rounded-xl bg-stone-900 flex-shrink-0 border border-white/5" />
+                        ) : (
+                          <div className="w-24 h-24 rounded-xl bg-stone-900 border border-white/5 flex-shrink-0 flex items-center justify-center text-slate-600 font-mono text-[9px]">
+                            ไม่มีรูปภาพ
+                          </div>
+                        )}
+                        <div className="flex-grow min-w-0 space-y-1">
+                          <h4 className="font-bold text-white text-xs truncate">{loc.name}</h4>
+                          <span className="inline-block text-[9px] bg-amber-950 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/20">
+                            {loc.type === 'admin' ? '🏛️ สถานที่ราชการ' : 
+                             loc.type === 'craft' ? '✨ งานหัตถกรรม/ฝีมือ' :
+                             loc.type === 'temple' ? '🙏 โบราณสถาน/วัด' :
+                             loc.type === 'nature' ? '🌳 แหล่งธรรมชาติ' : '🛒 ร้านค้าชุมชน'}
+                          </span>
+                          <div className="text-[9px] text-slate-400 font-mono">พิกัด: {loc.lat}, {loc.lng}</div>
+                          <p className="text-[10px] text-slate-400 line-clamp-3 font-light leading-relaxed">{loc.description}</p>
+                          <div className="flex items-center gap-2 pt-2">
+                            <button
+                              onClick={() => {
+                                setLandmarkForm({ 
+                                  name: loc.name, 
+                                  type: loc.type, 
+                                  lat: loc.lat, 
+                                  lng: loc.lng, 
+                                  description: loc.description, 
+                                  phone: loc.phone || "", 
+                                  imageUrl: loc.imageUrl 
+                                });
+                                setEditingLandmarkId(loc.id);
+                                setShowLandmarkForm(true);
+                              }}
+                              className="px-2.5 py-1.5 bg-slate-850 hover:bg-slate-800 text-amber-400 rounded-md text-[9px] font-bold border border-amber-500/10 cursor-pointer"
+                            >
+                              แก้ไขข้อมูล
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLandmark(loc.id)}
+                              className="px-2.5 py-1.5 bg-red-950/20 hover:bg-red-950/60 text-red-400 rounded-md text-[9px] font-bold border border-red-500/10 cursor-pointer"
+                            >
+                              ลบออก
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {(editedSettings.landmarks || []).length === 0 && (
+                      <div className="col-span-2 text-center py-10 bg-slate-950/10 border border-dashed border-white/5 rounded-2xl text-slate-500">
+                        ยังไม่มีข้อมูลพิกัดสถานที่ท่องเที่ยวในระบบหลังบ้านค่ะ
                       </div>
                     )}
                   </div>

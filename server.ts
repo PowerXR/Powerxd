@@ -53,6 +53,63 @@ function loadDB() {
       artisans: [
         { id: "art-1", name: "ป้าอิ่ม จิตรประจง", expertise: "บรมครูช่างเขียนผ้าบาติกโบราณ", bio: "ผู้เชี่ยวชาญการใช้เทียนและสีย้อมธรรมชาติ มีประสบการณ์การทอผ้าและทำบาติกมากว่า 40 ปีในชุมชนน้ำน้อย", imageUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80" },
         { id: "art-2", name: "ลุงไข่ นิลสุวรรณ", expertise: "ช่างศิลป์หัตถกรรมจักสานใบลาน", bio: "ปราชญ์ท้องถิ่นผู้ชำนาญการเลือกใบและจักตอกใบลานให้เหนียวนุ่ม ถ่ายทอดงานจักสานให้เยาวชนฟรี", imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80" }
+      ],
+      landmarks: [
+        {
+          id: "loc-municipality",
+          name: "สำนักงานเทศบาลตำบลน้ำน้อย",
+          type: "admin",
+          lat: 7.0518,
+          lng: 100.5285,
+          description: "ศูนย์กลางการประสานงานราชการ บริการประชาชน และจุดรวมการสนับสนุนส่งเสริมอาชีพชุมชนและผ้าบาติก",
+          phone: "074-211111",
+          imageUrl: "https://images.unsplash.com/photo-1577086664693-894d8405334a?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          id: "loc-batik",
+          name: "ศูนย์เรียนรู้และกลุ่มทอผ้าบาติกน้ำน้อย",
+          type: "craft",
+          lat: 7.0455,
+          lng: 100.5212,
+          description: "แหล่งผลิตผ้าบาติกทำมือชั้นยอดประจำจังหวัดสงขลา เป็นจุดสืบทอดภูมิปัญญาและเวิร์กชอปเขียนเทียนย้อมสี",
+          imageUrl: "https://images.unsplash.com/photo-1528164344705-47542687000d?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          id: "loc-palm",
+          name: "กลุ่มวิสาหกิจจักสานใบลานลานไทยน้ำน้อย",
+          type: "craft",
+          lat: 7.0482,
+          lng: 100.5245,
+          description: "กลุ่มหัตถกรรมจักสานใบลานพื้นบ้าน แปรรูปเป็นหมวก กระเป๋า และของตกแต่งคุณภาพส่งออก OTOP ทะเบียนสำคัญ",
+          imageUrl: "https://images.unsplash.com/photo-1590736969955-71cc94801759?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          id: "loc-temple-nok",
+          name: "วัดน้ำน้อยนอก (วัดประดิษฐานหลวงพ่อท่านเจ้าคุณ)",
+          type: "temple",
+          lat: 7.0423,
+          lng: 100.5235,
+          description: "ศูนย์รวมศรัทธาสำคัญ ประดิษฐานรูปหล่อพระครูประสาทสุตาคุณอันเป็นที่เคารพรัก มีสถาปัตยกรรมท้องถิ่นอันงดงาม",
+          imageUrl: "https://images.unsplash.com/photo-1609137144813-91b489506692?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          id: "loc-waterfall",
+          name: "น้ำตกหัวรน (อุทยานป่าต้นน้ำน้ำน้อย)",
+          type: "nature",
+          lat: 7.0621,
+          lng: 100.5410,
+          description: "น้ำตกธรรมชาติต้นน้ำที่สมบูรณ์ โอบล้อมด้วยแนวเขาสวนป่าเขียวขจี เป็นแหล่งพักผ่อนหย่อนใจทางธรรมชาติชั้นเยี่ยม",
+          imageUrl: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          id: "loc-market",
+          name: "ตลาดนัดวิถีชุมชนประชารัฐน้ำน้อย",
+          type: "market",
+          lat: 7.0501,
+          lng: 100.5268,
+          description: "ตลาดจำหน่ายสินค้าเกษตรอินทรีย์ อาหารพื้นบ้าน และผลิตภัณฑ์จักสานงานมือของพี่น้องชุมชนรอบเขตเทศบาล",
+          imageUrl: "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=600&q=80"
+        }
       ]
     } as AppSettings,
     categories: [
@@ -161,6 +218,9 @@ function loadDB() {
         if (!data.settings.artisans) {
           data.settings.artisans = defaultDB.settings.artisans;
         }
+        if (!data.settings.landmarks) {
+          data.settings.landmarks = defaultDB.settings.landmarks;
+        }
       }
       return data;
     } else {
@@ -188,6 +248,7 @@ async function startServer() {
 
   // Initial local copy of dynamic DB
   let db = loadDB();
+  saveDB(db);
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

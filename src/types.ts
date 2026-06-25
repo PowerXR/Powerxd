@@ -2,6 +2,17 @@
  * Types & Interfaces for Premium PHP Digital Shop
  */
 
+export interface Landmark {
+  id: string;
+  name: string;
+  type: 'admin' | 'craft' | 'temple' | 'nature' | 'market';
+  lat: number;
+  lng: number;
+  description: string;
+  phone?: string;
+  imageUrl: string;
+}
+
 export interface AppSettings {
   siteName: string;
   siteSubtitle: string;
@@ -47,6 +58,7 @@ export interface AppSettings {
     bio: string;
     imageUrl: string;
   }[];
+  landmarks?: Landmark[];
 }
 
 export interface Category {

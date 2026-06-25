@@ -14,6 +14,8 @@ import {
   Info
 } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap } from '@vis.gl/react-google-maps';
+import { AppSettings } from '../types';
+import { Language, getTranslation } from '../lib/translations';
 
 export interface Landmark {
   id: string;
@@ -26,7 +28,7 @@ export interface Landmark {
   imageUrl: string;
 }
 
-const landmarks: Landmark[] = [
+const defaultLandmarks: Landmark[] = [
   {
     id: "loc-municipality",
     name: "สำนักงานเทศบาลตำบลน้ำน้อย",
@@ -103,9 +105,24 @@ function MapCenteringController({ selectedLandmark }: { selectedLandmark: Landma
   return null;
 }
 
-export default function NamNoiMap() {
-  const [selectedLandmark, setSelectedLandmark] = useState<Landmark | null>(landmarks[0]);
-  const [activeInfoWindowId, setActiveInfoWindowId] = useState<string | null>(landmarks[0].id);
+export default function NamNoiMap({ settings, lang = "th" }: { settings?: AppSettings | null, lang?: Language }) {
+  const landmarks = (settings?.landmarks && settings.landmarks.length > 0)
+    ? settings.landmarks
+    : defaultLandmarks;
+
+  const [selectedLandmark, setSelectedLandmark] = useState<Landmark | null>(landmarks[0] || null);
+  const [activeInfoWindowId, setActiveInfoWindowId] = useState<string | null>(landmarks[0]?.id || null);
+
+  useEffect(() => {
+    if (landmarks && landmarks.length > 0) {
+      setSelectedLandmark(landmarks[0]);
+      setActiveInfoWindowId(landmarks[0].id);
+    } else {
+      setSelectedLandmark(null);
+      setActiveInfoWindowId(null);
+    }
+  }, [settings?.landmarks]);
+
   const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   const getIconForType = (type: Landmark['type']) => {
@@ -132,12 +149,12 @@ export default function NamNoiMap() {
 
   const getLabelForType = (type: Landmark['type']) => {
     switch (type) {
-      case 'admin': return 'สถานที่ราชการ';
-      case 'craft': return 'ศูนย์ศิลปหัตถกรรม OTOP';
-      case 'temple': return 'ศูนย์รวมจิตใจ';
-      case 'nature': return 'สถานที่ท่องเที่ยวทางธรรมชาติ';
-      case 'market': return 'ตลาดวิถีชุมชน';
-      default: return 'สถานที่น่าสนใจ';
+      case 'admin': return getTranslation(lang, 'categoryAdmin');
+      case 'craft': return getTranslation(lang, 'categoryCraft');
+      case 'temple': return getTranslation(lang, 'categoryTemple');
+      case 'nature': return getTranslation(lang, 'categoryNature');
+      case 'market': return getTranslation(lang, 'categoryMarket');
+      default: return getTranslation(lang, 'categoryCraft');
     }
   };
 
@@ -151,13 +168,13 @@ export default function NamNoiMap() {
       <div className="text-center md:text-left space-y-3 mb-10">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8E6D4E]/10 border border-[#8E6D4E]/20 text-[10.5px] tracking-widest uppercase font-black text-[#8E6D4E]">
           <MapIcon size={12} className="text-[#8E6D4E]" />
-          <span>ภูมิศาสตร์เชิงประวัติศาสตร์และแหล่งเรียนรู้</span>
+          <span>{lang === 'th' ? 'ภูมิศาสตร์เชิงประวัติศาสตร์และแหล่งเรียนรู้' : 'HISTORICAL GEOGRAPHY'}</span>
         </span>
         <h2 className="text-3xl sm:text-4xl font-serif text-[#4E3B2C] dark:text-[#E2C7A9] font-bold tracking-tight">
-          แผนที่แนะนำ แหล่งท่องเที่ยววัฒนธรรมตำบลน้ำน้อย
+          {getTranslation(lang, 'mapTitle')}
         </h2>
         <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 font-light max-w-2xl leading-relaxed">
-          ร่วมเดินทางเยือนตำบลน้ำน้อย แวะชมศาลากรรมสิทธิ์กลุ่มจักสานลานไทย ชื่นชมทักษะเขียนเทียนบาติกแท้ และสักการะหลวงพ่อท่านเจ้าคุณคู่เมือง
+          {getTranslation(lang, 'mapSub')}
         </p>
       </div>
 
@@ -289,7 +306,7 @@ export default function NamNoiMap() {
                                   rel="noreferrer"
                                   className="text-[9px] text-[#8E6D4E] hover:underline font-bold flex items-center gap-0.5"
                                 >
-                                  <span>เปิดใน Google Maps</span>
+                                  <span>{getTranslation(lang, 'directionBtn')}</span>
                                   <ExternalLink size={8} />
                                 </a>
                                 {loc.phone && (

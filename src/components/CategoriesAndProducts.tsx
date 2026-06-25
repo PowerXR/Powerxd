@@ -3,19 +3,22 @@ import { Category, Product, AppSettings } from "../types";
 import LucideIcon from "./LucideIcon";
 import { Search, Flame, Sparkles, Layers, ChevronRight, CornerDownRight, Landmark, Palette, User, Heart } from "lucide-react";
 import { motion } from "motion/react";
+import { Language, getTranslation } from "../lib/translations";
 
 interface CategoriesAndProductsProps {
   categories: Category[];
   products: Product[];
   settings: AppSettings;
   onSelectProduct: (product: Product) => void;
+  lang?: Language;
 }
 
 export default function CategoriesAndProducts({
   categories,
   products,
   settings,
-  onSelectProduct
+  onSelectProduct,
+  lang = "th"
 }: CategoriesAndProductsProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -34,11 +37,11 @@ export default function CategoriesAndProducts({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20 items-center">
         <div className="lg:col-span-5 space-y-5">
           <span className="text-[#8E6D4E] dark:text-[#E2C7A9] font-sans text-xs font-semibold tracking-wide flex items-center gap-2">
-            <span>🏛️ หัตถกรรมผู้ทรงภูมิปัญญาตำบลน้ำน้อย</span>
+            <span>{getTranslation(lang, "meetArtisans")}</span>
           </span>
           <h2 className="text-5xl sm:text-6xl font-serif text-[#4E3B2C] dark:text-[#FAF5EF] tracking-tight leading-[1.05] font-light">
-            Meet our <br />
-            <span className="font-serif italic font-normal text-[#8E6D4E] dark:text-[#E2C7A9]">artisans</span>
+            {getTranslation(lang, "artisansSectionTitle")} <br />
+            <span className="font-serif italic font-normal text-[#8E6D4E] dark:text-[#E2C7A9]">{getTranslation(lang, "artisansSectionHighlight")}</span>
           </h2>
           <div className="flex items-center gap-3.5 py-1">
             <div className="h-[1px] w-20 bg-gradient-to-r from-transparent to-[#8E6D4E]/50" />
@@ -46,12 +49,12 @@ export default function CategoriesAndProducts({
             <div className="h-[1px] w-20 bg-gradient-to-l from-transparent to-[#8E6D4E]/50" />
           </div>
           <p className="text-stone-600 dark:text-stone-300 text-xs sm:text-[13.5px] leading-relaxed font-light">
-            เราเล็งเห็นคุณค่าของการสืบทอดมรดกทางวัฒนธรรมและร่วมเคียงคู่กับภูมิปัญญาชาวบ้านตำบลน้ำน้อย อำเภอหาดใหญ่ จังหวัดสงขลา ผลิตภัณฑ์ OTOP และอาหารทุกชิ้นที่โชว์บนเว็ปไซต์นี้รังสรรค์ด้วยประณีตศิลป์แห่งวิถีชาวใต้จากฝีมือของศิลปินชุมชนน้ำน้อยตัวจริง เสียงจริง ทุกๆ ชิ้นงานล้วนใส่หัวใจและจิตวิญญาณแห่งความเป็นไทยร่วมสมัยไว้ครบถ้วน
+            {getTranslation(lang, "artisansSectionBio")}
           </p>
           <div className="pt-2">
             <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-stone-150 dark:bg-[#1C1815]/50 border border-[#8E6D4E]/35 text-xs text-[#8E6D4E] dark:text-[#E2C7A9] font-medium shadow-sm">
               <Heart size={12} className="fill-[#8E6D4E] text-[#8E6D4E] animate-pulse" />
-              <span>สนับสนุนความยั่งยืน กระจายรายได้สู่ชุมชนโดยตรง 100%</span>
+              <span>{getTranslation(lang, "sustainDirect")}</span>
             </span>
           </div>
         </div>
@@ -59,18 +62,18 @@ export default function CategoriesAndProducts({
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#8E6D4E]/5 rounded-full blur-2xl pointer-events-none" />
           <div className="relative w-full sm:w-56 aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-stone-900 flex-shrink-0 border-2 border-white/90 shadow-lg group-hover:scale-[1.02] transition-transform duration-500">
             <img 
-              src="https://images.unsplash.com/photo-1590736969955-71cc94801759?auto=format&fit=crop&w=500&q=80" 
+               src="https://images.unsplash.com/photo-1590736969955-71cc94801759?auto=format&fit=crop&w=500&q=80" 
               alt="Artisan weaving textile" 
               className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
             />
           </div>
           <div className="space-y-4 flex-1">
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full border border-[#8E6D4E]/40 bg-[#8E6D4E]/10 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#E2C7A9]">
-              <span>★ FEATURED ARTISAN / ปราชญ์ผู้สร้างสรรค์</span>
+              <span>{getTranslation(lang, "featuredArtisanTag")}</span>
             </div>
-            <h4 className="font-serif font-black text-xl text-white dark:text-[#E2C7A9] leading-tight tracking-tight">กลุ่มทอและเขียนลายบาติกบ้านน้ำน้อย</h4>
+            <h4 className="font-serif font-black text-xl text-white dark:text-[#E2C7A9] leading-tight tracking-tight">{getTranslation(lang, "featuredArtisanName")}</h4>
             <p className="text-[12px] sm:text-[13px] text-stone-300 leading-relaxed font-light italic">
-              "การเขียนเทียนลงบนผืนผ้าบาติกคือการบันทึกธรรมชาติรอบตัวเรา ลายคลื่นของแม่น้ำน้ำน้อยอันหล่อเลี้ยงชีวิต คือหัวใจที่เราคราฟต์ลงบนผ้าครามธรรมชาติผืนทองนี้ด้วยใจภักดิ์"
+              "{getTranslation(lang, "featuredArtisanQuote")}"
             </p>
           </div>
         </div>
@@ -80,10 +83,10 @@ export default function CategoriesAndProducts({
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 border-b border-[#8E6D4E]/10 pb-6">
         <div>
           <span className="flex items-center gap-2 text-[10px] tracking-[0.2em] font-bold uppercase text-[#8E6D4E] dark:text-[#E2C7A9] mb-2 font-sans">
-            <span>✨ หัตถกรรมคัดสรรระดับพรีเมียม (CURATED ARTISTRY)</span>
+            <span>{getTranslation(lang, "curatedArtistryTag")}</span>
           </span>
           <h3 className="text-3xl font-serif text-[#4E3B2C] dark:text-[#FAF5EF] tracking-tight font-light">
-            เลือกสรรผลงานศิลปะอันล้ำค่า
+            {getTranslation(lang, "curatedArtistryTitle")}
           </h3>
           <div className="flex items-center gap-3.5 mt-2">
             <div className="h-[1px] w-16 bg-gradient-to-r from-transparent to-[#8E6D4E]/40" />
@@ -99,7 +102,7 @@ export default function CategoriesAndProducts({
           </div>
           <input
             type="text"
-            placeholder="ค้นหาผลงานและภูมิปัญญาล้ำค่า..."
+            placeholder={getTranslation(lang, "searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-11 pr-4 py-3 rounded-full text-xs bg-white dark:bg-[#1A1613] border border-[#8E6D4E]/20 text-[#4E3B2C] dark:text-stone-200 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#8E6D4E] focus:border-[#8E6D4E] hover:border-[#8E6D4E]/40 shadow-sm transition-all font-light"
@@ -125,8 +128,8 @@ export default function CategoriesAndProducts({
             <Layers size={16} />
           </div>
           <div>
-            <div className={`font-extrabold text-[13px] leading-tight ${selectedCategory === "all" ? "text-[#E2C7A9]" : "text-[#4E3B2C] dark:text-[#ECE5DD]"}`}>ผลงานทั้งหมด</div>
-            <div className={`text-[10px] mt-1 font-light ${selectedCategory === "all" ? "text-stone-300" : "text-stone-500 dark:text-stone-400"}`}>เลือกชมทุกชิ้นงาน</div>
+            <div className={`font-extrabold text-[13px] leading-tight ${selectedCategory === "all" ? "text-[#E2C7A9]" : "text-[#4E3B2C] dark:text-[#ECE5DD]"}`}>{getTranslation(lang, "allProductsTab")}</div>
+            <div className={`text-[10px] mt-1 font-light ${selectedCategory === "all" ? "text-stone-300" : "text-stone-500 dark:text-stone-400"}`}>{getTranslation(lang, "allProductsDesc")}</div>
           </div>
         </button>
 
@@ -180,7 +183,7 @@ export default function CategoriesAndProducts({
                       ? "text-stone-300" 
                       : "text-stone-500 dark:text-stone-400"
                 }`}>
-                  {cat.description || `${count} ชิ้นงาน`}
+                  {cat.description || `${count} ${getTranslation(lang, "countItems")}`}
                 </div>
               </div>
             </button>
@@ -191,7 +194,7 @@ export default function CategoriesAndProducts({
       {/* Grid listing */}
       {filteredProducts.length === 0 ? (
         <div className="text-center py-24 bg-[#FCFAF7]/40 dark:bg-stone-900/20 border border-dashed border-[#8E6D4E]/20 rounded-[2rem]">
-          <p className="text-stone-400 text-sm font-light">ไม่พบผลงานศิลป์ในหมวดหมู่นี้ หรือการค้นหาไม่พบข้อมูลผลิตภัณฑ์ใดๆ</p>
+          <p className="text-stone-400 text-sm font-light">{getTranslation(lang, "noCuratedProducts")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -218,7 +221,7 @@ export default function CategoriesAndProducts({
                   
                   {/* Category overlay label */}
                   <span className="absolute top-3 left-3 px-3 py-1 text-[9px] uppercase tracking-wider font-extrabold rounded-full bg-[#12100E]/80 text-white border border-white/10 backdrop-blur-md">
-                    {categories.find((c) => c.id === prod.categoryId)?.name || "งานชุมชน"}
+                    {categories.find((c) => c.id === prod.categoryId)?.name || getTranslation(lang, "communityCraft")}
                   </span>
                   
                   {/* Stock count label */}
@@ -227,7 +230,7 @@ export default function CategoriesAndProducts({
                       ? "bg-red-500/10 text-red-500 border-red-500/20" 
                       : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                   }`}>
-                    {isOutOfStock ? "สั่งพรีออเดอร์" : `พร้อมส่ง ${prod.stock.length} ชิ้น`}
+                    {isOutOfStock ? getTranslation(lang, "preOrder") : `${getTranslation(lang, "readyToShip")} ${prod.stock.length} ${getTranslation(lang, "items")}`}
                   </span>
                 </div>
 
@@ -242,9 +245,9 @@ export default function CategoriesAndProducts({
 
                   <div className="pt-4 border-t border-[#8E6D4E]/10 flex items-center justify-between">
                     <div>
-                      <span className="text-[9px] text-[#8E6D4E] block uppercase font-extrabold tracking-wider font-serif">มูลค่าสนับสนุน</span>
+                      <span className="text-[9px] text-[#8E6D4E] block uppercase font-extrabold tracking-wider font-serif">{getTranslation(lang, "contributionVal")}</span>
                       <span className="text-xl font-bold font-serif text-[#8E6D4E] tracking-tight">
-                        {prod.price.toLocaleString()} <span className="text-xs font-normal text-stone-550 dark:text-stone-400">บาท</span>
+                        {prod.price.toLocaleString()} <span className="text-xs font-normal text-stone-550 dark:text-stone-400">{getTranslation(lang, "baht")}</span>
                       </span>
                     </div>
 
@@ -252,7 +255,7 @@ export default function CategoriesAndProducts({
                       onClick={() => onSelectProduct(prod)}
                       className="px-4.5 py-2.5 rounded-xl text-xs font-bold bg-[#8E6D4E] hover:bg-[#725437] text-white transition-all flex items-center gap-1 cursor-pointer shadow-md shadow-[#8E6D4E]/5 active:scale-95 hover:scale-[1.02]"
                     >
-                      <span>ชมรายละเอียด</span>
+                      <span>{getTranslation(lang, "viewDetailsBtn")}</span>
                       <ChevronRight size={13} />
                     </button>
                   </div>
