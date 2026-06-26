@@ -186,6 +186,23 @@ export default function ProductDetailModal({
             <div>
               <h2 className="text-xl font-serif font-bold text-[#4E3B2C] dark:text-[#EAE3DA] sm:text-2xl leading-snug">{product.name}</h2>
               
+              {product.sellerId && (
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-stone-100/50 dark:bg-[#151210]/60 border border-[#8E6D4E]/10 mt-3 mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-[#8E6D4E]/15 text-[#8E6D4E] flex items-center justify-center font-serif text-xs font-black shadow-inner">
+                      {product.sellerName ? product.sellerName.charAt(0).toUpperCase() : "S"}
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">ผู้ส่งผลิตภัณฑ์นี้</span>
+                      <h4 className="text-[11.5px] font-bold text-[#4E3B2C] dark:text-[#E2C7A9]">{product.sellerName}</h4>
+                    </div>
+                  </div>
+                  <span className="text-[9.5px] font-bold text-[#8E6D4E] bg-[#8E6D4E]/5 border border-[#8E6D4E]/15 px-2.5 py-0.5 rounded-lg">
+                    {product.sellerType === 'internal' ? 'Official Group Store' : 'Community Shop'}
+                  </span>
+                </div>
+              )}
+              
               {/* Nav Tabs specs or reviews */}
               <div className="flex gap-4 border-b border-[#8E6D4E]/10 mt-4 mb-4">
                 <button 

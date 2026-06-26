@@ -9,6 +9,7 @@ import TopupModal from "./components/TopupModal";
 import AdminPanel from "./components/AdminPanel";
 import AuthModal from "./components/AuthModal";
 import HistoryModal from "./components/HistoryModal";
+import SellerModal from "./components/SellerModal";
 import NamNoiMap from "./components/NamNoiMap";
 
 
@@ -42,6 +43,7 @@ export default function App() {
   const [topupModalOpen, setTopupModalOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [sellerModalOpen, setSellerModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
 
@@ -477,6 +479,7 @@ export default function App() {
             onOpenTopup={() => setTopupModalOpen(true)}
             onOpenAdmin={() => setAdminPanelOpen(true)}
             onOpenHistory={() => setHistoryModalOpen(true)}
+            onOpenSellerDashboard={() => setSellerModalOpen(true)}
             onLogout={handleLogout}
             lang={lang}
             setLang={setLang}
@@ -828,6 +831,20 @@ export default function App() {
                 onClose={() => setHistoryModalOpen(false)}
                 onAddReview={handleAddReview}
                 lang={lang}
+              />
+            )}
+
+            {/* 5.5. Seller Registration & Dashboard Hub */}
+            {sellerModalOpen && settings && (
+              <SellerModal
+                user={user}
+                settings={settings}
+                categories={categories}
+                onClose={() => setSellerModalOpen(false)}
+                onRefreshData={() => {
+                  loadStoreData();
+                  if (user) refreshUserSession(user.id);
+                }}
               />
             )}
 

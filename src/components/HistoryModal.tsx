@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, Transaction, AppSettings, Review } from "../types";
-import { X, Calendar, DollarSign, Gift, Star, Clock, ShoppingBag, Eye, HeartHandshake, Truck } from "lucide-react";
+import { X, Calendar, DollarSign, Gift, Star, Clock, ShoppingBag, Eye, HeartHandshake, Truck, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Language, getTranslation } from "../lib/translations";
 
@@ -21,6 +21,21 @@ export default function HistoryModal({
 }: HistoryModalProps) {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Custom alert & confirm dialog states for iframe environment
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const [alertDialog, setAlertDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
 
   // Review Submitting states
   const [showReviewForm, setShowReviewForm] = useState<string | null>(null); // Transaction ID
@@ -51,6 +66,49 @@ export default function HistoryModal({
     }
   };
 
+  const handleConfirmDeliver = (txId: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "ยืนยันการรับสินค้า",
+      message: "คุณได้รับสินค้าเรียบร้อยสมบูรณ์ดี และต้องการปล่อยยอดเงินค้ำประกัน (Escrow) ให้ผู้ขายเลยใช่หรือไม่?",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const res = await fetch(`/api/orders/${txId}/deliver`, {
+            method: "POST",
+            headers: {
+              "X-User-Id": user.id
+            }
+          });
+          if (res.ok) {
+            setAlertDialog({
+              isOpen: true,
+              title: "ยืนยันรับสินค้าสำเร็จ",
+              message: "ยืนยันรับพัสดุสำเร็จ! ปลดปล่อยเงินค้ำประกันส่งต่อแบรนด์ผู้ขายเรียบร้อยแล้วค่ะ",
+              type: "success"
+            });
+            fetchTxs();
+          } else {
+            const err = await res.json();
+            setAlertDialog({
+              isOpen: true,
+              title: "เกิดข้อผิดพลาด",
+              message: err.error || "เกิดข้อผิดพลาดในการกดยืนยันค่ะ",
+              type: "error"
+            });
+          }
+        } catch (e) {
+          setAlertDialog({
+            isOpen: true,
+            title: "เกิดข้อผิดพลาด",
+            message: "การเชื่อมต่อล้มเหลว",
+            type: "error"
+          });
+        }
+      }
+    });
+  };
+
   useEffect(() => {
     fetchTxs();
   }, [user.id]);
@@ -73,11 +131,23 @@ export default function HistoryModal({
         : lang === "en"
         ? "Review successfully recorded! Thank you very much for supporting our local artisans!"
         : "บันทึกการรีวิวและมอบดวงดีให้กลุ่มวิสาหกิจน้ำน้อยประทับตราสำเร็จ! ขอบพระคุณอย่างยิ่งค่ะ";
-      alert(successAlert);
+      
+      setAlertDialog({
+        isOpen: true,
+        title: lang === "zh" ? "评价成功" : lang === "en" ? "Review Recorded" : "รีวิวสำเร็จ",
+        message: successAlert,
+        type: "success"
+      });
       setShowReviewForm(null);
       setReviewComment("");
     } catch (err) {
       console.error(err);
+      setAlertDialog({
+        isOpen: true,
+        title: "เกิดข้อผิดพลาด",
+        message: "เกิดข้อผิดพลาดในการส่งรีวิวค่ะ",
+        type: "error"
+      });
     } finally {
       setReviewLoading(false);
     }
@@ -230,7 +300,12 @@ export default function HistoryModal({
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(tx.trackingNumber || "");
-                              alert(lang === "zh" ? "物流快递单号已成功复制到剪贴板！" : lang === "en" ? "Tracking number copied to clipboard!" : "คัดลอกเลขพัสดุเรียบร้อยแล้วค่ะ!");
+                              setAlertDialog({
+                                isOpen: true,
+                                title: lang === "zh" ? "复制成功" : lang === "en" ? "Copied" : "คัดลอกสำเร็จ",
+                                message: lang === "zh" ? "物流快递单号已成功复制到剪贴板！" : lang === "en" ? "Tracking number copied to clipboard!" : "คัดลอกเลขพัสดุเรียบร้อยแล้วค่ะ!",
+                                type: "success"
+                              });
                             }}
                             className="p-0.5 px-1.5 bg-[#8E6D4E]/10 hover:bg-[#8E6D4E]/20 text-[#8E6D4E] rounded text-[8.5px] font-bold cursor-pointer transition-all"
                           >
@@ -406,15 +481,26 @@ export default function HistoryModal({
                         </div>
                       </form>
                     ) : (
-                      <button
-                        onClick={() => setShowReviewForm(tx.id)}
-                        className="py-1 px-2.5 text-[10px] rounded-lg border border-[#8E6D4E]/15 hover:bg-[#8E6D4E]/10 transition-all text-[#715437] dark:text-stone-300 flex items-center gap-1 cursor-pointer"
-                      >
-                        <HeartHandshake size={11} className={activeColor} />
-                        <span>
-                          {lang === "zh" ? "为本款工艺品撰写口碑评价" : lang === "en" ? "Write Review for Artisans" : "เขียนรีวิวให้คะแนนชิ้นงานชาวบ้าน"}
-                        </span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {tx.orderStatus === 'shipped' && (
+                          <button
+                            onClick={() => handleConfirmDeliver(tx.id)}
+                            className="py-1 px-3 text-[10px] rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center gap-1 cursor-pointer transition-all hover:scale-105 shadow-md shadow-emerald-600/20"
+                          >
+                            <CheckCircle2 size={11} />
+                            <span>ยืนยันรับสินค้า (ปล่อยเงินประกัน)</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setShowReviewForm(tx.id)}
+                          className="py-1 px-2.5 text-[10px] rounded-lg border border-[#8E6D4E]/15 hover:bg-[#8E6D4E]/10 transition-all text-[#715437] dark:text-stone-300 flex items-center gap-1 cursor-pointer"
+                        >
+                          <HeartHandshake size={11} className={activeColor} />
+                          <span>
+                            {lang === "zh" ? "为本款工艺品撰写口碑评价" : lang === "en" ? "Write Review for Artisans" : "เขียนรีวิวให้คะแนนชิ้นงานชาวบ้าน"}
+                          </span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -422,6 +508,56 @@ export default function HistoryModal({
             ))
           )}
         </div>
+
+        {/* Custom Confirmation Dialog */}
+        {confirmDialog?.isOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+            <div className="relative w-full max-w-sm rounded-2xl bg-[#FAF7F2] dark:bg-[#1C1815] border border-[#8E6D4E]/25 p-5 shadow-xl animate-fadeIn">
+              <h3 className="text-sm font-bold text-[#4E3B2C] dark:text-[#EAE3DA] mb-2">{confirmDialog.title}</h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-5 leading-relaxed">{confirmDialog.message}</p>
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDialog(null)}
+                  className="px-3.5 py-1.5 rounded-lg text-[11px] bg-stone-100 dark:bg-stone-850 hover:bg-stone-200 dark:hover:bg-stone-800 text-stone-500 dark:text-stone-400 font-bold transition-all cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDialog.onConfirm}
+                  className="px-4 py-1.5 rounded-lg text-[11px] bg-[#8E6D4E] hover:bg-[#725437] text-white font-bold shadow-md shadow-[#8E6D4E]/15 transition-all cursor-pointer"
+                >
+                  ยืนยันทำรายการ
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Alert Dialog */}
+        {alertDialog?.isOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+            <div className="relative w-full max-w-sm rounded-2xl bg-[#FAF7F2] dark:bg-[#1C1815] border border-[#8E6D4E]/25 p-5 shadow-xl animate-fadeIn">
+              <h3 className="text-sm font-bold text-[#4E3B2C] dark:text-[#EAE3DA] mb-2 flex items-center gap-1.5">
+                {alertDialog.type === "success" && <span className="text-emerald-600">✓</span>}
+                {alertDialog.type === "error" && <span className="text-red-500">✗</span>}
+                {alertDialog.type === "info" && <span className="text-amber-500">ℹ</span>}
+                <span>{alertDialog.title}</span>
+              </h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-5 leading-relaxed">{alertDialog.message}</p>
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setAlertDialog(null)}
+                  className="px-4 py-1.5 rounded-lg text-[11px] bg-[#8E6D4E] hover:bg-[#725437] text-white font-bold transition-all cursor-pointer"
+                >
+                  ตกลง
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </motion.div>
     </div>

@@ -13,6 +13,7 @@ interface HeaderProps {
   onOpenTopup: () => void;
   onOpenAdmin: () => void;
   onOpenHistory: () => void;
+  onOpenSellerDashboard: () => void;
   onLogout: () => void;
   lang: Language;
   setLang: (lang: Language) => void;
@@ -27,6 +28,7 @@ export default function Header({
   onOpenTopup,
   onOpenAdmin,
   onOpenHistory,
+  onOpenSellerDashboard,
   onLogout,
   lang,
   setLang
@@ -198,6 +200,14 @@ export default function Header({
                         )}
 
                         <button 
+                          onClick={() => { setDropdownOpen(false); onOpenSellerDashboard(); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:bg-[#8E6D4E]/5 rounded-lg transition-colors text-left cursor-pointer"
+                        >
+                          <Settings size={14} />
+                          <span>{user.role?.startsWith('seller') ? "แผงควบคุมร้านค้า" : "สมัครเป็นผู้ขาย"}</span>
+                        </button>
+
+                        <button 
                           onClick={() => { setDropdownOpen(false); onOpenHistory(); }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#4E3B2C] dark:text-slate-300 hover:bg-[#8E6D4E]/5 rounded-lg transition-colors text-left cursor-pointer"
                         >
@@ -273,6 +283,37 @@ export default function Header({
                   className="flex-1 py-1.5 text-center text-xs font-bold rounded-xl bg-[#8E6D4E] text-white hover:bg-[#725437] transition-all"
                 >
                   {getTranslation(lang, "register")}
+                </button>
+              </div>
+            )}
+
+            {user && (
+              <div className="pt-2 border-t border-[#8E6D4E]/10 space-y-2">
+                {user.role === 'admin' && (
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); onOpenAdmin(); }}
+                    className="w-full text-left py-1.5 hover:text-[#8E6D4E] cursor-pointer text-xs font-bold text-amber-700 dark:text-amber-400"
+                  >
+                    👑 {getTranslation(lang, "adminDashboard")}
+                  </button>
+                )}
+                <button 
+                  onClick={() => { setMobileMenuOpen(false); onOpenSellerDashboard(); }}
+                  className="w-full text-left py-1.5 hover:text-[#8E6D4E] cursor-pointer text-xs font-bold text-teal-600 dark:text-teal-400"
+                >
+                  🏪 {user.role?.startsWith('seller') ? "แผงควบคุมร้านค้า" : "สมัครเป็นผู้ขาย"}
+                </button>
+                <button 
+                  onClick={() => { setMobileMenuOpen(false); onOpenHistory(); }}
+                  className="w-full text-left py-1.5 hover:text-[#8E6D4E] cursor-pointer text-xs font-bold"
+                >
+                  📜 {getTranslation(lang, "purchaseHistory")}
+                </button>
+                <button 
+                  onClick={() => { setMobileMenuOpen(false); onLogout(); }}
+                  className="w-full text-left py-1.5 hover:text-red-500 text-red-600 text-xs font-bold"
+                >
+                  🚪 {getTranslation(lang, "logout")}
                 </button>
               </div>
             )}

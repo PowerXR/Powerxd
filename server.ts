@@ -248,6 +248,16 @@ async function startServer() {
 
   // Initial local copy of dynamic DB
   let db = loadDB();
+
+  // Ensure seller collections exist
+  if (!db.sellerVerifications) db.sellerVerifications = [];
+  if (!db.withdrawals) db.withdrawals = [];
+  if (db.users) {
+    db.users.forEach((u: any) => {
+      if (u.pendingBalance === undefined) u.pendingBalance = 0;
+      if (u.withdrawableBalance === undefined) u.withdrawableBalance = 0;
+    });
+  }
   saveDB(db);
 
   app.use(express.json({ limit: "50mb" }));
@@ -614,7 +624,17 @@ async function startServer() {
 
     // Save and record Transaction
     const hasShipping = req.body.shippingDetails && req.body.shippingDetails.name;
-    const newTx: Transaction = {
+    const sellerId = product.sellerId || "";
+
+    if (sellerId) {
+      const seller = db.users.find((u: any) => u.id === sellerId);
+      if (seller) {
+        if (seller.pendingBalance === undefined) seller.pendingBalance = 0;
+        seller.pendingBalance = parseFloat((seller.pendingBalance + totalToPay).toFixed(2));
+      }
+    }
+
+    const newTx: any = {
       id: "tx-" + Date.now(),
       userId: user.id,
       username: user.username,
@@ -623,6 +643,8 @@ async function startServer() {
       details: `${product.type === "box" ? "สุ่มกล่อง" : "ซื้อสินค้าจัดส่ง"} [${product.name}] - ${rewardDetails} ${couponDetails}${shippingDetailsText}`,
       status: "success",
       date: new Date().toISOString(),
+      sellerId,
+      isSellerCredited: false,
       ...(hasShipping ? {
         shippingDetails: req.body.shippingDetails,
         orderStatus: "preparing",
@@ -1171,6 +1193,451 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
         itemsSold
       }
     });
+  });
+
+  // ==========================================
+  // MULTI-ROLE SELLER, ESCROW, AND WITHDRAWAL APIs
+  // ==========================================
+
+  // GET current seller info, status, and balance
+  app.get("/api/seller/status", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) return res.status(404).json({ error: "ไม่พบข้อมูลผู้ใช้นี้" });
+
+    // Find if there is an active/pending verification
+    const verification = db.sellerVerifications.find((v: any) => v.userId === userId) || null;
+
+    res.json({
+      isSeller: user.role === "seller_internal" || user.role === "seller_external" || user.role === "admin",
+      role: user.role,
+      verification,
+      pendingBalance: user.pendingBalance || 0,
+      withdrawableBalance: user.withdrawableBalance || 0
+    });
+  });
+
+  // GET all approved sellers/shops
+  app.get("/api/sellers", (req, res) => {
+    const approvedSellers = db.sellerVerifications
+      .filter((v: any) => v.status === "approved")
+      .map((v: any) => ({
+        id: v.userId,
+        userId: v.userId,
+        username: v.username,
+        shopName: v.shopName,
+        shopDescription: v.shopDescription || "ร้านค้าสมาชิกชุมชนน้ำน้อย",
+        sellerType: v.sellerType,
+        submittedAt: v.submittedAt
+      }));
+    res.json(approvedSellers);
+  });
+
+  // POST update seller shop settings (Name, Slogan, bank details)
+  app.post("/api/seller/settings", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) return res.status(403).json({ error: "Unauthorized" });
+
+    const isSeller = user.role === "seller_internal" || user.role === "seller_external" || user.role === "admin";
+    if (!isSeller) {
+      return res.status(403).json({ error: "เฉพาะผู้ขายที่ได้รับการอนุมัติเท่านั้นที่สามารถแก้ไขข้อมูลร้านค้าได้" });
+    }
+
+    const { shopName, shopDescription, bankName, bankAccountNumber, bankAccountName } = req.body;
+    if (!shopName) {
+      return res.status(400).json({ error: "กรุณากรอกชื่อร้านค้า" });
+    }
+
+    let verification = db.sellerVerifications.find((v: any) => v.userId === userId);
+    if (!verification) {
+      // Create one if it doesn't exist (legacy approved seller)
+      verification = {
+        id: "vrf-" + Date.now(),
+        userId,
+        username: user.username,
+        sellerType: user.role === "seller_internal" ? "internal" : "external",
+        fullName: user.username,
+        citizenId: "1234567890123",
+        phone: "0000000000",
+        bankAccountName: bankAccountName || user.username,
+        bankAccountNumber: bankAccountNumber || "",
+        bankName: bankName || "KBANK",
+        shopName,
+        shopDescription: shopDescription || "",
+        idCardPhotoUrl: "",
+        status: "approved",
+        submittedAt: new Date().toISOString()
+      };
+      db.sellerVerifications.unshift(verification);
+    } else {
+      verification.shopName = shopName;
+      verification.shopDescription = shopDescription || "";
+      if (bankName) verification.bankName = bankName;
+      if (bankAccountNumber) verification.bankAccountNumber = bankAccountNumber;
+      if (bankAccountName) verification.bankAccountName = bankAccountName;
+    }
+
+    // Sync current product list's seller names for this seller
+    db.products.forEach((p: any) => {
+      if (p.sellerId === userId) {
+        p.sellerName = shopName;
+      }
+    });
+
+    saveDB(db);
+    res.json({ success: true, message: "อัปเดตข้อมูลร้านค้าเรียบร้อยแล้ว", verification });
+  });
+
+  // POST apply to become a seller
+  app.post("/api/seller/apply", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) return res.status(404).json({ error: "ไม่พบข้อมูลผู้ใช้นี้" });
+
+    // Check if already approved
+    if (user.role === "seller_internal" || user.role === "seller_external" || user.role === "admin") {
+      return res.status(400).json({ error: "คุณได้รับการอนุมัติเป็นผู้ขายหรือมีสิทธิ์พิเศษอยู่แล้ว" });
+    }
+
+    // Check for existing pending verification
+    const existing = db.sellerVerifications.find((v: any) => v.userId === userId && v.status === "pending");
+    if (existing) {
+      return res.status(400).json({ error: "คุณมีรายการยื่นขอเป็นผู้ขายที่อยู่ระหว่างการตรวจสอบแล้ว" });
+    }
+
+    const {
+      sellerType,
+      fullName,
+      citizenId,
+      phone,
+      bankAccountName,
+      bankAccountNumber,
+      bankName,
+      shopName,
+      shopDescription,
+      idCardPhotoUrl
+    } = req.body;
+
+    if (!sellerType || !fullName || !citizenId || !phone || !bankAccountName || !bankAccountNumber || !bankName || !shopName) {
+      return res.status(400).json({ error: "กรุณากรอกข้อมูลการยืนยันตัวตนความปลอดภัยสูงให้ครบถ้วน" });
+    }
+
+    const newVerification = {
+      id: "vrf-" + Date.now(),
+      userId,
+      username: user.username,
+      sellerType, // 'internal' or 'external'
+      fullName,
+      citizenId,
+      phone,
+      bankAccountName,
+      bankAccountNumber,
+      bankName,
+      shopName,
+      shopDescription: shopDescription || "",
+      idCardPhotoUrl: idCardPhotoUrl || "https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&w=150&q=80",
+      status: "pending",
+      submittedAt: new Date().toISOString()
+    };
+
+    db.sellerVerifications.unshift(newVerification);
+    saveDB(db);
+
+    res.json({ success: true, message: "ยื่นเอกสารข้อมูลผู้ขายเพื่อตรวจสอบเสร็จสิ้น รอแอดมินประเมินผลอนุมัติ" });
+  });
+
+  // GET seller products
+  app.get("/api/seller/products", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const sellerProds = db.products.filter((p: any) => p.sellerId === userId);
+    res.json(sellerProds);
+  });
+
+  // POST add or edit seller product
+  app.post("/api/seller/products", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) return res.status(403).json({ error: "Unauthorized" });
+
+    // Only allow verified sellers or admin
+    const isSeller = user.role === "seller_internal" || user.role === "seller_external" || user.role === "admin";
+    if (!isSeller) {
+      return res.status(403).json({ error: "เฉพาะผู้ขายที่ได้รับการอนุมัติเท่านั้นที่สามารถลงขายสินค้าได้" });
+    }
+
+    const { id, categoryId, name, price, description, imageUrl, stock, details, type } = req.body;
+
+    if (!categoryId || !name || !price || !description || !imageUrl) {
+      return res.status(400).json({ error: "กรุณากรอกข้อมูลผลิตภัณฑ์หลักให้ครบถ้วน" });
+    }
+
+    // Process stock
+    let stockArr: string[] = [];
+    if (typeof stock === "string") {
+      stockArr = stock.split("\n").map(s => s.trim()).filter(Boolean);
+    } else if (Array.isArray(stock)) {
+      stockArr = stock.map(s => String(s).trim()).filter(Boolean);
+    }
+
+    if (id) {
+      // Edit mode
+      const prodIndex = db.products.findIndex((p: any) => p.id === id);
+      if (prodIndex === -1) return res.status(404).json({ error: "ไม่พบสินค้าที่ต้องการแก้ไข" });
+
+      const prod = db.products[prodIndex];
+      // Check owner
+      if (prod.sellerId !== userId && user.role !== "admin") {
+        return res.status(403).json({ error: "คุณไม่มีสิทธิ์แก้ไขสินค้าชิ้นนี้" });
+      }
+
+      prod.categoryId = categoryId;
+      prod.name = name;
+      prod.price = Number(price);
+      prod.description = description;
+      prod.imageUrl = imageUrl;
+      prod.stock = stockArr;
+      prod.details = details || "";
+      prod.type = type || "normal";
+    } else {
+      // Create mode
+      const newProd = {
+        id: "prod-" + Date.now(),
+        categoryId,
+        name,
+        price: Number(price),
+        description,
+        imageUrl,
+        stock: stockArr,
+        timesSold: 0,
+        details: details || "",
+        type: type || "normal",
+        sellerId: userId,
+        sellerType: user.role === "seller_internal" ? "internal" : "external",
+        sellerName: user.username
+      };
+      db.products.push(newProd);
+    }
+
+    saveDB(db);
+    res.json({ success: true, message: "บันทึกผลิตภัณฑ์ลงระบบเสร็จสิ้น" });
+  });
+
+  // DELETE seller product
+  app.delete("/api/seller/products/:id", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) return res.status(403).json({ error: "Unauthorized" });
+
+    const prodId = req.params.id;
+    const prodIndex = db.products.findIndex((p: any) => p.id === prodId);
+    if (prodIndex === -1) return res.status(404).json({ error: "ไม่พบสินค้านี้" });
+
+    const prod = db.products[prodIndex];
+    if (prod.sellerId !== userId && user.role !== "admin") {
+      return res.status(403).json({ error: "คุณไม่มีสิทธิ์ลบสินค้าชิ้นนี้" });
+    }
+
+    db.products.splice(prodIndex, 1);
+    saveDB(db);
+    res.json({ success: true, message: "ลบสินค้าสำเร็จ" });
+  });
+
+  // GET seller orders (transactions of products they sell)
+  app.get("/api/seller/orders", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const sellerTxs = db.transactions.filter((tx: any) => tx.sellerId === userId);
+    res.json(sellerTxs);
+  });
+
+  // POST seller ship order
+  app.post("/api/seller/orders/:id/ship", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const { trackingNumber, trackingCarrier, note } = req.body;
+
+    const txIndex = db.transactions.findIndex((tx: any) => tx.id === req.params.id);
+    if (txIndex === -1) return res.status(404).json({ error: "ไม่พบคำสั่งซื้อนี้" });
+
+    const tx = db.transactions[txIndex];
+    if (tx.sellerId !== userId) {
+      return res.status(403).json({ error: "คุณไม่มีสิทธิ์จัดการคำสั่งซื้อนี้" });
+    }
+
+    tx.orderStatus = "shipped";
+    tx.trackingNumber = trackingNumber || "";
+    tx.trackingCarrier = trackingCarrier || "Flash Express";
+
+    if (!tx.statusUpdates) tx.statusUpdates = [];
+    tx.statusUpdates.push({
+      status: "shipped",
+      date: new Date().toISOString(),
+      note: note || `จัดส่งสินค้าแล้ว โดย ${tx.trackingCarrier} เลขแทร็กกิ้ง: ${tx.trackingNumber}`
+    });
+
+    saveDB(db);
+    res.json({ success: true, transaction: tx });
+  });
+
+  // POST buyer confirm delivery (escrow unlock!)
+  app.post("/api/orders/:id/deliver", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const txIndex = db.transactions.findIndex((tx: any) => tx.id === req.params.id);
+    if (txIndex === -1) return res.status(404).json({ error: "ไม่พบรายการสั่งซื้อนี้" });
+
+    const tx = db.transactions[txIndex];
+    // Buyer must match tx.userId
+    if (tx.userId !== userId) {
+      return res.status(403).json({ error: "คุณไม่มีสิทธิ์จัดการคำสั่งซื้อนี้" });
+    }
+
+    if (tx.orderStatus === "delivered") {
+      return res.status(400).json({ error: "คำสั่งซื้อได้รับการจัดส่งและปิดดีลเสร็จสิ้นแล้ว" });
+    }
+
+    tx.orderStatus = "delivered";
+    if (!tx.statusUpdates) tx.statusUpdates = [];
+    tx.statusUpdates.push({
+      status: "delivered",
+      date: new Date().toISOString(),
+      note: "ผู้ซื้อกดยืนยันได้รับสินค้าเรียบร้อย ปลดล็อกยอดเงินประกันจัดส่งโอนเข้ากระเป๋าเงินถอนได้ของผู้ขาย"
+    });
+
+    // ESCROW PAYOUT UNLOCK:
+    if (tx.sellerId && !tx.isSellerCredited) {
+      const seller = db.users.find((u: any) => u.id === tx.sellerId);
+      if (seller) {
+        if (seller.pendingBalance === undefined) seller.pendingBalance = 0;
+        if (seller.withdrawableBalance === undefined) seller.withdrawableBalance = 0;
+
+        // Subtract from pending, add to withdrawable
+        seller.pendingBalance = Math.max(0, parseFloat((seller.pendingBalance - tx.amount).toFixed(2)));
+        seller.withdrawableBalance = parseFloat((seller.withdrawableBalance + tx.amount).toFixed(2));
+        tx.isSellerCredited = true;
+      }
+    }
+
+    saveDB(db);
+    res.json({ success: true, transaction: tx });
+  });
+
+  // GET seller withdrawal history
+  app.get("/api/seller/withdrawals", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const userWithdrawals = db.withdrawals.filter((w: any) => w.userId === userId);
+    res.json(userWithdrawals);
+  });
+
+  // POST seller request withdrawal
+  app.post("/api/seller/withdraw", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) return res.status(404).json({ error: "ไม่พบผู้ใช้" });
+
+    const { amount, bankName, bankAccountNumber, bankAccountName } = req.body;
+    const amt = Number(amount);
+
+    if (!amt || amt <= 0) {
+      return res.status(400).json({ error: "กรุณาระบุจำนวนเงินที่ถูกต้อง" });
+    }
+
+    if (!bankName || !bankAccountNumber || !bankAccountName) {
+      return res.status(400).json({ error: "กรุณากรอกข้อมูลธนาคารเพื่อรับเงินให้ครบถ้วน" });
+    }
+
+    const currentWithdrawable = user.withdrawableBalance || 0;
+    if (currentWithdrawable < amt) {
+      return res.status(400).json({ error: "ยอดเงินที่สามารถถอนได้ของคุณไม่เพียงพอ" });
+    }
+
+    // Deduct immediately upon request
+    user.withdrawableBalance = parseFloat((currentWithdrawable - amt).toFixed(2));
+
+    const newRequest = {
+      id: "wdr-" + Date.now(),
+      userId,
+      username: user.username,
+      amount: amt,
+      bankName,
+      bankAccountNumber,
+      bankAccountName,
+      status: "pending",
+      submittedAt: new Date().toISOString()
+    };
+
+    db.withdrawals.unshift(newRequest);
+    saveDB(db);
+
+    res.json({ success: true, message: "คำส่งคำขอถอนเงินสำเร็จ ยอดถอนจะหักล่วงหน้าและส่งแอดมินดำเนินการตรวจสอบ", request: newRequest });
+  });
+
+  // GET admin verifications
+  app.get("/api/admin/verifications", (req, res) => {
+    const role = req.headers["x-user-role"] as string;
+    if (role !== "admin") return res.status(403).json({ error: "Unauthorized" });
+    res.json(db.sellerVerifications);
+  });
+
+  // POST admin review verification
+  app.post("/api/admin/verifications/:id/review", (req, res) => {
+    const role = req.headers["x-user-role"] as string;
+    if (role !== "admin") return res.status(403).json({ error: "Unauthorized" });
+
+    const { status, adminNotes } = req.body; // 'approved' | 'rejected'
+    const reqIndex = db.sellerVerifications.findIndex((v: any) => v.id === req.params.id);
+    if (reqIndex === -1) return res.status(404).json({ error: "ไม่พบรายการยืนยันตัวตนนี้" });
+
+    const verification = db.sellerVerifications[reqIndex];
+    verification.status = status;
+    verification.adminNotes = adminNotes || "";
+    verification.reviewedAt = new Date().toISOString();
+
+    if (status === "approved") {
+      const applicant = db.users.find((u: any) => u.id === verification.userId);
+      if (applicant) {
+        applicant.role = verification.sellerType === "internal" ? "seller_internal" : "seller_external";
+      }
+    }
+
+    saveDB(db);
+    res.json({ success: true, verification });
+  });
+
+  // GET admin withdrawals
+  app.get("/api/admin/withdrawals", (req, res) => {
+    const role = req.headers["x-user-role"] as string;
+    if (role !== "admin") return res.status(403).json({ error: "Unauthorized" });
+    res.json(db.withdrawals);
+  });
+
+  // POST admin review withdrawal
+  app.post("/api/admin/withdrawals/:id/review", (req, res) => {
+    const role = req.headers["x-user-role"] as string;
+    if (role !== "admin") return res.status(403).json({ error: "Unauthorized" });
+
+    const { status, adminNotes } = req.body; // 'approved' | 'rejected'
+    const reqIndex = db.withdrawals.findIndex((w: any) => w.id === req.params.id);
+    if (reqIndex === -1) return res.status(404).json({ error: "ไม่พบรายการคำขอถอนเงินนี้" });
+
+    const withdrawal = db.withdrawals[reqIndex];
+    if (withdrawal.status !== "pending") {
+      return res.status(400).json({ error: "รายการคำขอนี้ได้รับการตัดสินไปแล้ว" });
+    }
+
+    withdrawal.status = status;
+    withdrawal.adminNotes = adminNotes || "";
+    withdrawal.reviewedAt = new Date().toISOString();
+
+    if (status === "rejected") {
+      // Refund the seller's withdrawableBalance
+      const seller = db.users.find((u: any) => u.id === withdrawal.userId);
+      if (seller) {
+        if (seller.withdrawableBalance === undefined) seller.withdrawableBalance = 0;
+        seller.withdrawableBalance = parseFloat((seller.withdrawableBalance + withdrawal.amount).toFixed(2));
+      }
+    }
+
+    saveDB(db);
+    res.json({ success: true, withdrawal });
   });
 
   // GET Source code generator endpoint for PHP PDO system

@@ -24,13 +24,29 @@ export default function CategoriesAndProducts({
   const translatedProducts = products.map(prod => getTranslatedProduct(prod, lang));
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedShop, setSelectedShop] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Dynamically extract unique active shops from the products list
+  const shops = products.reduce((acc: Array<{ id: string; name: string; description?: string }>, p) => {
+    if (p.sellerId && p.sellerName) {
+      if (!acc.some(s => s.id === p.sellerId)) {
+        acc.push({
+          id: p.sellerId,
+          name: p.sellerName,
+          description: p.sellerType === "internal" ? "Official Community Shop" : "Community Partner Shop"
+        });
+      }
+    }
+    return acc;
+  }, []);
 
   const filteredProducts = translatedProducts.filter((p) => {
     const matchesCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
+    const matchesShop = selectedShop === "all" || p.sellerId === selectedShop;
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesShop && matchesSearch;
   });
 
   return (
@@ -112,6 +128,80 @@ export default function CategoriesAndProducts({
           />
         </div>
       </div>
+
+      {/* Shops Horizontal Filter slider */}
+      {shops.length > 0 && (
+        <div className="mb-8 p-6 rounded-[2rem] bg-[#FAF7F2]/30 dark:bg-[#151210]/30 border border-[#8E6D4E]/10">
+          <span className="flex items-center gap-1.5 text-[10px] tracking-[0.15em] font-black uppercase text-[#8E6D4E] dark:text-[#E2C7A9] mb-3.5">
+            <Landmark size={12} className="text-[#8E6D4E]" />
+            <span>{lang === 'en' ? 'CHOOSE STORE' : lang === 'zh' ? '选择商店' : 'เลือกชมแยกตามร้านค้าสมาชิก'}</span>
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setSelectedShop("all")}
+              className={`px-4.5 py-2.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer border ${
+                selectedShop === "all"
+                  ? "bg-[#8E6D4E] text-white border-[#8E6D4E] shadow-sm"
+                  : "bg-white dark:bg-[#151210] text-[#735A45] dark:text-[#C5B49E] border-[#8E6D4E]/15 hover:border-[#8E6D4E]/40 shadow-xs"
+              }`}
+            >
+              🏪 {lang === 'en' ? 'All Stores' : lang === 'zh' ? '所有商店' : 'ร้านค้าชุมชนทั้งหมด'}
+            </button>
+            
+            {shops.map((shop) => (
+              <button
+                key={shop.id}
+                onClick={() => setSelectedShop(shop.id)}
+                className={`px-4.5 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer border flex items-center gap-2 ${
+                  selectedShop === shop.id
+                    ? "bg-[#8E6D4E] text-white border-[#8E6D4E] shadow-sm"
+                    : "bg-white dark:bg-[#151210] text-[#735A45] dark:text-[#C5B49E] border-[#8E6D4E]/15 hover:border-[#8E6D4E]/40 shadow-xs"
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${
+                  selectedShop === shop.id ? "bg-white text-[#8E6D4E]" : "bg-[#8E6D4E]/10 text-[#8E6D4E]"
+                }`}>
+                  {shop.name.charAt(0).toUpperCase()}
+                </div>
+                <span>{shop.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Selected Shop Banner */}
+      {selectedShop !== "all" && (
+        (() => {
+          const activeShop = shops.find(s => s.id === selectedShop);
+          if (!activeShop) return null;
+          return (
+            <div className="p-6 sm:p-8 rounded-[2.25rem] bg-[#FAF7F2] dark:bg-[#151210] border border-[#8E6D4E]/25 mb-8 flex flex-col md:flex-row items-start md:items-center gap-5 relative overflow-hidden shadow-md animate-fadeIn">
+              <div className="absolute right-0 top-0 w-48 h-48 bg-[#8E6D4E]/5 rounded-full blur-2xl pointer-events-none animate-ping-slow" />
+              <div className="w-16 h-16 rounded-[1.25rem] bg-[#8E6D4E] text-white flex items-center justify-center text-3xl font-serif font-black shadow-md flex-shrink-0">
+                {activeShop.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h4 className="text-xl font-serif font-bold text-[#4E3B2C] dark:text-[#E2C7A9]">{activeShop.name}</h4>
+                  <span className="text-[9px] px-2.5 py-0.5 rounded-full bg-[#8E6D4E]/10 border border-[#8E6D4E]/20 text-[#8E6D4E] font-bold">
+                    {activeShop.description || "ร้านค้าสมาชิกชุมชนน้ำน้อย"}
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500 dark:text-stone-400 font-light leading-relaxed">
+                  ยินดีต้อนรับสู่หน้าร้านค้าส่วนตัวสมาชิกกลุ่มศิลปะและหัตถกรรม ผลิตภัณฑ์ทั้งหมดของทางแบรนด์ผ่านเกณฑ์ประเมินความปลอดภัยสูงและรับประกันสิทธิ์ส่งพัสดุไวแท้ 100% ค่ะ
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedShop("all")}
+                className="px-4 py-2 bg-[#8E6D4E]/5 hover:bg-[#8E6D4E]/10 text-xs text-[#8E6D4E] font-bold rounded-xl transition-all cursor-pointer border border-[#8E6D4E]/15 self-start md:self-center hover:scale-102"
+              >
+                ดูร้านค้าอื่นทั้งหมด ✕
+              </button>
+            </div>
+          );
+        })()
+      )}
 
       {/* Categories horizontal filter tabs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
@@ -239,6 +329,19 @@ export default function CategoriesAndProducts({
 
                 {/* Card description body */}
                 <div className="flex flex-1 flex-col p-5 space-y-3">
+                  {prod.sellerId && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-stone-500 font-medium pb-1 border-b border-[#8E6D4E]/5">
+                      <span className="w-4.5 h-4.5 rounded-full bg-[#8E6D4E]/10 text-[#8E6D4E] flex items-center justify-center font-serif text-[9px] font-black">
+                        {prod.sellerName ? prod.sellerName.charAt(0).toUpperCase() : "S"}
+                      </span>
+                      <span className="hover:underline cursor-pointer" onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedShop(prod.sellerId!);
+                      }}>
+                        ร้าน: <strong className="text-[#8E6D4E]">{prod.sellerName}</strong>
+                      </span>
+                    </div>
+                  )}
                   <h3 className="text-[14px] font-bold text-[#4E3B2C] dark:text-[#ECE5DD] min-h-[40px] line-clamp-2 leading-snug group-hover:text-[#8E6D4E] transition-colors duration-300">
                     {prod.name}
                   </h3>

@@ -89,6 +89,9 @@ export interface Product {
   details: string; // Markdown / extended specs
   type: 'normal' | 'box';
   boxItems?: BoxItem[]; // Available outcomes if type = 'box'
+  sellerId?: string;
+  sellerName?: string;
+  sellerType?: 'internal' | 'external';
 }
 
 export interface User {
@@ -96,10 +99,12 @@ export interface User {
   username: string;
   email: string;
   balance: number;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'seller_internal' | 'seller_external';
   discordId?: string;
   avatarUrl?: string;
   password?: string;
+  pendingBalance?: number;
+  withdrawableBalance?: number;
 }
 
 export interface Coupon {

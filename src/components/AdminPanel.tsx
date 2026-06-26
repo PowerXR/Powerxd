@@ -132,7 +132,7 @@ export default function AdminPanel({
   onUpdateSettings,
   onRefreshData
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "categories" | "coupons" | "users" | "settings" | "php-exporter" | "orders" | "about-us" | "portfolios" | "artisans" | "landmarks">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "categories" | "coupons" | "users" | "settings" | "php-exporter" | "orders" | "about-us" | "portfolios" | "artisans" | "landmarks" | "seller-verifications" | "admin-withdrawals">("dashboard");
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -197,6 +197,96 @@ export default function AdminPanel({
     trackingCarrier: "",
     note: ""
   });
+
+  // Seller verifications & withdrawals admin state
+  const [sellerVerifications, setSellerVerifications] = useState<any[]>([]);
+  const [verificationsLoading, setVerificationsLoading] = useState(false);
+  const [editingVrfId, setEditingVrfId] = useState<string | null>(null);
+  const [adminWithdrawals, setAdminWithdrawals] = useState<any[]>([]);
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(false);
+
+  const fetchVerifications = async () => {
+    setVerificationsLoading(true);
+    try {
+      const res = await fetch("/api/admin/verifications", {
+        headers: { "x-user-role": user?.role || "admin", "x-user-id": user?.id || "" }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSellerVerifications(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setVerificationsLoading(false);
+    }
+  };
+
+  const fetchAdminWithdrawals = async () => {
+    setWithdrawalsLoading(true);
+    try {
+      const res = await fetch("/api/admin/withdrawals", {
+        headers: { "x-user-role": user?.role || "admin", "x-user-id": user?.id || "" }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminWithdrawals(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWithdrawalsLoading(false);
+    }
+  };
+
+  const handleReviewVerification = async (id: string, status: "approved" | "rejected", adminNotes: string) => {
+    try {
+      const res = await fetch(`/api/admin/verifications/${id}/review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-role": user?.role || "admin",
+          "x-user-id": user?.id || ""
+        },
+        body: JSON.stringify({ status, adminNotes })
+      });
+      if (res.ok) {
+        showCustomAlert("ดำเนินการสำเร็จ", `อัปเดตคำขอเป็น ${status === 'approved' ? 'อนุมัติผู้ขาย' : 'ปฏิเสธ'} เรียบร้อย`, "success");
+        setEditingVrfId(null);
+        fetchVerifications();
+        onRefreshData();
+      } else {
+        const data = await res.json();
+        showCustomAlert("ผิดพลาด", data.error || "เกิดข้อผิดพลาดในการตรวจสอบ", "error");
+      }
+    } catch (err) {
+      showCustomAlert("ผิดพลาด", "ไม่สามารถติดต่อเซิร์ฟเวอร์ได้", "error");
+    }
+  };
+
+  const handleReviewWithdrawal = async (id: string, status: "approved" | "rejected", adminNotes: string) => {
+    try {
+      const res = await fetch(`/api/admin/withdrawals/${id}/review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-role": user?.role || "admin",
+          "x-user-id": user?.id || ""
+        },
+        body: JSON.stringify({ status, adminNotes })
+      });
+      if (res.ok) {
+        showCustomAlert("ดำเนินการสำเร็จ", `อัปเดตรายการคำขอถอนเงินเป็น ${status === 'approved' ? 'อนุมัติแล้ว' : 'ปฏิเสธคำขอและคืนเครดิต'} เรียบร้อย`, "success");
+        fetchAdminWithdrawals();
+        onRefreshData();
+      } else {
+        const data = await res.json();
+        showCustomAlert("ผิดพลาด", data.error || "เกิดข้อผิดพลาดในการอนุมัติถอนเงิน", "error");
+      }
+    } catch (err) {
+      showCustomAlert("ผิดพลาด", "ไม่สามารถติดต่อเซิร์ฟเวอร์ได้", "error");
+    }
+  };
 
   // App settings editing copy state
   const [editedSettings, setEditedSettings] = useState<AppSettings>({ ...settings });
@@ -482,6 +572,10 @@ export default function AdminPanel({
       fetchUsers();
     } else if (activeTab === "orders") {
       fetchTransactions();
+    } else if (activeTab === "seller-verifications") {
+      fetchVerifications();
+    } else if (activeTab === "admin-withdrawals") {
+      fetchAdminWithdrawals();
     }
   }, [activeTab]);
 
@@ -873,10 +967,10 @@ export default function AdminPanel({
         </div>
 
         {/* Dynamic Split Frame: Left Sidebar Tabs / Right Details Workspace */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-4 flex-1 overflow-hidden">
+        <div className="flex flex-col md:grid md:grid-cols-12 gap-5 pt-4 flex-1 min-h-0 overflow-hidden">
           
           {/* LEFT Sidebar controls */}
-          <div className="md:col-span-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 border-b md:border-b-0 md:border-r border-white/5 pr-0 md:pr-4">
+          <div className="flex-shrink-0 md:col-span-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 border-b md:border-b-0 md:border-r border-white/5 pr-0 md:pr-4">
             <button
               onClick={() => setActiveTab("dashboard")}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
@@ -968,6 +1062,24 @@ export default function AdminPanel({
               <span>จัดการแผนที่แนะนำ</span>
             </button>
             <button
+              onClick={() => setActiveTab("seller-verifications")}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+                activeTab === "seller-verifications" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <Users size={14} className="text-teal-400" />
+              <span>อนุมัติผู้สมัคร KYC</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("admin-withdrawals")}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+                activeTab === "admin-withdrawals" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <Gift size={14} className="text-emerald-400" />
+              <span>อนุมัติการถอนเงิน</span>
+            </button>
+            <button
               onClick={() => setActiveTab("settings")}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "settings" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
@@ -989,7 +1101,7 @@ export default function AdminPanel({
           </div>
 
           {/* RIGHT Workspace Details */}
-          <div className="md:col-span-9 overflow-y-auto pr-1 flex flex-col h-full pb-4">
+          <div className="flex-1 min-h-0 md:col-span-9 overflow-y-auto pr-1 flex flex-col h-full pb-4">
             
             {/* T1: Statistics Dashboard */}
             {activeTab === "dashboard" && (
@@ -2988,6 +3100,278 @@ CREATE TABLE IF NOT EXISTS users (
                   </div>
                 </div>
 
+              </div>
+            )}
+
+            {/* Seller Verifications (Admin tab) */}
+            {activeTab === "seller-verifications" && (
+              <div className="space-y-4 text-xs h-full overflow-y-auto pr-1">
+                <div className="p-4 rounded-2xl bg-[#1e1e24] border border-white/5 text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="text-amber-500" size={16} />
+                      <h4 className="font-extrabold text-white uppercase tracking-wider">ระบบอนุมัติยืนยันตัวตนผู้ขาย (Seller Identity Verification)</h4>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={fetchVerifications}
+                      className="p-1.5 px-3 bg-white/5 hover:bg-white/10 text-[10px] text-slate-300 rounded-lg flex items-center gap-1 cursor-pointer transition-all border border-white/5"
+                    >
+                      <RefreshCw size={11} className={verificationsLoading ? "animate-spin" : ""} />
+                      <span>รีเฟรชคำขอ</span>
+                    </button>
+                  </div>
+                  <p className="text-slate-400 text-[11px] mt-1.5 leading-relaxed">
+                    ที่นี่คือแผงควบคุมสำหรับพิจารณาคุณสมบัติผู้ขายที่ยื่นเอกสารตัวตนเข้ามาในระบบ หากอนุมัติ บทบาทของผู้ใช้จะเปลี่ยนเป็นผู้ขายทันทีค่ะ
+                  </p>
+                </div>
+
+                {verificationsLoading ? (
+                  <div className="text-center py-12 text-slate-500 font-bold">กำลังดาวน์โหลดข้อมูลผู้สมัคร KYC...</div>
+                ) : sellerVerifications.length === 0 ? (
+                  <div className="p-10 text-center rounded-2xl border border-dashed border-white/10 bg-slate-900/30 text-slate-500">
+                    ยังไม่มีผู้ใช้รายใดยื่นเอกสารเพื่อขออนุมัติเป็นผู้ขายในขณะนี้
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {sellerVerifications.map((v: any) => {
+                      return (
+                        <div key={v.id} className="p-5 rounded-2xl bg-slate-900/40 border border-white/10 space-y-4">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/5 pb-3">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold tracking-wider text-teal-400 bg-teal-400/10 px-2 py-0.5 rounded-md mr-2">
+                                {v.sellerType === "internal" ? "ผู้ขายภายในระบบ (Internal)" : "ผู้ขายภายนอกชุมชน (External)"}
+                              </span>
+                              <h5 className="text-white text-sm font-bold inline-block">{v.shopName}</h5>
+                              <p className="text-slate-400 text-[11px] mt-0.5">{v.shopDescription}</p>
+                            </div>
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                              v.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                              v.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                              'bg-red-500/10 text-red-500 border border-red-500/20'
+                            }`}>
+                              {v.status === 'pending' ? '⏳ รอการตรวจสอบ' :
+                               v.status === 'approved' ? '✓ อนุมัติผ่านเกณฑ์' : '✗ ปฏิเสธการอนุมัติ'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-300">
+                            <div className="space-y-1.5">
+                              <p><strong className="text-slate-400">ผู้ยื่นคำขอ:</strong> {v.username} (ID: {v.userId})</p>
+                              <p><strong className="text-slate-400">ชื่อ-นามสกุลจริง:</strong> {v.fullName}</p>
+                              <p><strong className="text-slate-400">เลขบัตรประชาชน/ใบอนุญาต:</strong> {v.citizenId}</p>
+                              <p><strong className="text-slate-400">เบอร์โทรศัพท์ติดต่อ:</strong> {v.phone}</p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <p><strong className="text-slate-400">ธนาคารสำหรับถอนเงิน:</strong> {v.bankName}</p>
+                              <p><strong className="text-slate-400">ชื่อบัญชีธนาคาร:</strong> {v.bankAccountName}</p>
+                              <p><strong className="text-slate-400">เลขบัญชีธนาคาร:</strong> {v.bankAccountNumber}</p>
+                              <p><strong className="text-slate-400">เวลายื่นคำขอ:</strong> {new Date(v.submittedAt).toLocaleString('th-TH')}</p>
+                            </div>
+                          </div>
+
+                          {v.idCardPhotoUrl && (
+                            <div className="p-2 bg-slate-950/40 rounded-xl border border-white/5 inline-block">
+                              <p className="text-[10px] text-slate-400 mb-1">ภาพหลักฐานยืนยันตัวตน (ID Card/Registration Photo):</p>
+                              <img 
+                                src={v.idCardPhotoUrl} 
+                                alt="ID Verification" 
+                                className="max-h-40 rounded-lg object-contain border border-white/10"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          )}
+
+                          {v.status === "pending" || editingVrfId === v.id ? (
+                            <div className="pt-2 border-t border-white/5 space-y-3">
+                              <div>
+                                <label className="block text-[10px] text-slate-400 mb-1 font-bold">ความคิดเห็น/บันทึกแอดมิน (Admin Notes):</label>
+                                <textarea 
+                                  id={`note-${v.id}`}
+                                  placeholder="ระบุหมายเหตุ เช่น 'เอกสารครบถ้วน ผ่านเกณฑ์ประเมิน' หรือ 'รูปบัตรประชาชนไม่ชัดเจน กรุณายื่นสมัครใหม่'"
+                                  className="w-full bg-slate-950 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500/40"
+                                  rows={2}
+                                  defaultValue={v.adminNotes || ""}
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const noteVal = (document.getElementById(`note-${v.id}`) as HTMLTextAreaElement)?.value || "";
+                                    handleReviewVerification(v.id, "approved", noteVal);
+                                  }}
+                                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-emerald-600/15"
+                                >
+                                  <Check size={14} />
+                                  <span>อนุมัติคำขอ (Approve)</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const noteVal = (document.getElementById(`note-${v.id}`) as HTMLTextAreaElement)?.value || "";
+                                    if (!noteVal) {
+                                      showCustomAlert("กรุณาระบุหมายเหตุ", "คุณต้องระบุสาเหตุที่ปฏิเสธเพื่อแจ้งให้ผู้สมัครทราบด้วยค่ะ", "error");
+                                      return;
+                                    }
+                                    handleReviewVerification(v.id, "rejected", noteVal);
+                                  }}
+                                  className="px-4 py-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-red-600/15"
+                                >
+                                  <X size={14} />
+                                  <span>ปฏิเสธคำขอ (Reject)</span>
+                                </button>
+                                {editingVrfId === v.id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingVrfId(null)}
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all cursor-pointer"
+                                  >
+                                    ยกเลิก
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-3 rounded-xl bg-slate-950/60 border border-white/5 text-[11px] space-y-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="space-y-1">
+                                <p><strong className="text-slate-400">ตรวจสอบโดยแอดมินเมื่อ:</strong> {new Date(v.reviewedAt).toLocaleString('th-TH')}</p>
+                                <p><strong className="text-slate-400">บันทึกของแอดมิน:</strong> <span className="text-amber-400">{v.adminNotes || "ไม่มีหมายเหตุ"}</span></p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setEditingVrfId(v.id)}
+                                className="self-start sm:self-center px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 font-bold rounded-lg border border-white/5 transition-all cursor-pointer text-[10px]"
+                              >
+                                ✎ แก้ไขผลการพิจารณา / ตรวจสอบอีกครั้ง
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Admin Withdrawals (Admin tab) */}
+            {activeTab === "admin-withdrawals" && (
+              <div className="space-y-4 text-xs h-full overflow-y-auto pr-1">
+                <div className="p-4 rounded-2xl bg-[#1e1e24] border border-white/5 text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Gift className="text-emerald-500" size={16} />
+                      <h4 className="font-extrabold text-white uppercase tracking-wider">ระบบอนุมัติการถอนเงินรายได้ผู้ขาย (Seller Withdrawal Requests Review)</h4>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={fetchAdminWithdrawals}
+                      className="p-1.5 px-3 bg-white/5 hover:bg-white/10 text-[10px] text-slate-300 rounded-lg flex items-center gap-1 cursor-pointer transition-all border border-white/5"
+                    >
+                      <RefreshCw size={11} className={withdrawalsLoading ? "animate-spin" : ""} />
+                      <span>รีเฟรชข้อมูล</span>
+                    </button>
+                  </div>
+                  <p className="text-slate-400 text-[11px] mt-1.5 leading-relaxed">
+                    แอดมินทำการตรวจสอบและอนุมัติยอดถอนเงินของผู้ขายที่ได้รับการสั่งซื้อและปิดดีลส่งถึงมือเรียบร้อยแล้ว กรุณาทำการโอนเงินจริงเข้าบัญชีผู้ขายตามข้อมูลด้านล่างก่อนกดยืนยันอนุมัติจ่ายเงินค่ะ
+                  </p>
+                </div>
+
+                {withdrawalsLoading ? (
+                  <div className="text-center py-12 text-slate-500 font-bold">กำลังดาวน์โหลดรายการถอนเงิน...</div>
+                ) : adminWithdrawals.length === 0 ? (
+                  <div className="p-10 text-center rounded-2xl border border-dashed border-white/10 bg-slate-900/30 text-slate-500">
+                    ยังไม่มีคำขอถอนเงินที่รอดำเนินการในขณะนี้
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/40">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-950/80 border-b border-white/5 text-[10px] text-slate-400 uppercase font-black">
+                          <th className="p-3">รหัสถอน</th>
+                          <th className="p-3">ผู้ขอถอน</th>
+                          <th className="p-3 text-right">จำนวนถอน</th>
+                          <th className="p-3">ข้อมูลบัญชีธนาคารผู้รับเงิน</th>
+                          <th className="p-3">วันที่ยื่นเรื่อง</th>
+                          <th className="p-3 text-center">สถานะ</th>
+                          <th className="p-3">บันทึกพิจารณา / การจัดการ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminWithdrawals.map((w: any) => (
+                          <tr key={w.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                            <td className="p-3 font-mono text-[10px] text-slate-400">{w.id}</td>
+                            <td className="p-3">
+                              <span className="font-bold text-slate-200">{w.username}</span>
+                              <div className="text-[9px] text-slate-500">ID: {w.userId}</div>
+                            </td>
+                            <td className="p-3 text-right text-emerald-400 font-bold text-sm">
+                              ฿{w.amount.toLocaleString()}
+                            </td>
+                            <td className="p-3 space-y-0.5">
+                              <span className="bg-emerald-500/10 text-emerald-400 text-[9px] px-1.5 py-0.5 rounded font-black mr-1 uppercase">{w.bankName}</span>
+                              <span className="text-slate-200 font-semibold">{w.bankAccountNumber}</span>
+                              <div className="text-[10px] text-slate-400 font-light">ชื่อบัญชี: {w.bankAccountName}</div>
+                            </td>
+                            <td className="p-3 text-slate-400 text-[10px]">
+                              {new Date(w.submittedAt).toLocaleString('th-TH')}
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide ${
+                                w.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                                w.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                                'bg-red-500/10 text-red-500 border border-red-500/20'
+                              }`}>
+                                {w.status === 'pending' ? '⏳ รอโอนอนุมัติ' :
+                                 w.status === 'approved' ? '✓ จ่ายแล้ว' : '✗ ปฏิเสธ'}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              {w.status === "pending" ? (
+                                <div className="space-y-2 min-w-[200px]">
+                                  <input 
+                                    type="text"
+                                    id={`wnote-${w.id}`}
+                                    placeholder="ใส่หมายเลขอ้างอิงสลิปโอนเงิน..."
+                                    className="w-full bg-slate-900 border border-white/10 rounded-lg p-1.5 text-white text-[11px]"
+                                  />
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const noteVal = (document.getElementById(`wnote-${w.id}`) as HTMLInputElement)?.value || "";
+                                        handleReviewWithdrawal(w.id, "approved", noteVal);
+                                      }}
+                                      className="flex-1 py-1 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[10px] text-center"
+                                    >
+                                      อนุมัติจ่ายแล้ว
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const noteVal = (document.getElementById(`wnote-${w.id}`) as HTMLInputElement)?.value || "";
+                                        handleReviewWithdrawal(w.id, "rejected", noteVal);
+                                      }}
+                                      className="py-1 px-2 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-lg text-[10px]"
+                                    >
+                                      คืนเครดิต
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-[10px] space-y-0.5 text-slate-400">
+                                  <div>โดยแอดมิน: {new Date(w.reviewedAt).toLocaleDateString('th-TH')}</div>
+                                  <div>สลิป/บันทึก: <span className="text-amber-400">{w.adminNotes || "ไม่มีหมายเหตุ"}</span></div>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
