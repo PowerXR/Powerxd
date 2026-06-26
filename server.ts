@@ -22,7 +22,7 @@ function loadDB() {
       truewalletPhone: "099-123-4567",
       bankAccountNumber: "9770964014",
       bankAccountName: "ธนกฤต ชูกำเนิด Thanakrit Chokumnerd",
-      bankName: "ธนาคารกรุงเทะ",
+      bankName: "ธนาคารกรุงเทพ",
       qrSlipToken: "DEMO-SLIPOK-TOKEN-12345",
       botCfTurnstileKey: "0x4AAAAAAAx_demo_turnstile_key",
       discordClientId: "1122334455667788",
