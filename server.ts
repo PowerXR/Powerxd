@@ -701,13 +701,8 @@ async function startServer() {
         const blob = new Blob([buffer], { type: mimeType });
         
         const thunderFormData = new FormData();
-
         thunderFormData.append("image", blob, `slip.${mimeType.split("/")[1] || "png"}`);
         thunderFormData.append("checkDuplicate", "true");
-
-        // เพิ่ม 2 บรรทัดนี้
-        thunderFormData.append("matchAccount", "true");
-        thunderFormData.append("matchAmount", depositAmount.toString());
 
         const thunderResponse = await fetch("https://api.thunder.in.th/v2/verify/bank", {
           method: "POST",
@@ -736,6 +731,38 @@ async function startServer() {
             senderName = rawSlip.sender?.account?.name?.th || rawSlip.sender?.account?.name?.en || "ผู้โอน";
             receiverName = rawSlip.receiver?.account?.name?.th || rawSlip.receiver?.account?.name?.en || "นาย ธนกฤต ชูกำเนิด";
             bankShort = rawSlip.sender?.bank?.short || "BANK";
+
+            // STRICT RECIPIENT MATCHING VALIDATION:
+            // Ensure the transfer is actually made to the merchant's configured name or bank account
+            const targetName = db.settings.bankAccountName || "ธนกฤต ชูกำเนิด";
+            const targetAcc = db.settings.bankAccountNumber || "1051915832";
+            
+            const nameTokens = ["ธนกฤต", "thanakrit", "chokumnerd", "ชูกำเนิด"];
+            const hasNameMatch = receiverName && nameTokens.some(token => 
+              receiverName.toLowerCase().includes(token.toLowerCase())
+            );
+            
+            let rAcc = rawSlip.receiver?.account?.value || "";
+            const cleanTargetAcc = targetAcc.replace(/[^0-9]/g, "");
+            const cleanSlipAcc = rAcc.replace(/[^0-9xX]/g, "");
+            
+            let hasAccMatch = false;
+            if (cleanTargetAcc && cleanSlipAcc) {
+              const targetSuffix4 = cleanTargetAcc.slice(-4);
+              const targetSuffix3 = cleanTargetAcc.slice(-3);
+              if (cleanSlipAcc.includes(targetSuffix4) || cleanSlipAcc.endsWith(targetSuffix3)) {
+                hasAccMatch = true;
+              }
+            }
+            
+            const isValidReceiver = hasNameMatch || hasAccMatch;
+            if (!isValidReceiver) {
+              console.warn(`Validation failed: Recipient [${receiverName}] or account [${rAcc}] does not match configured merchant [${targetName}] / [${targetAcc}].`);
+              return res.status(400).json({
+                success: false,
+                error: `ตรวจสอบผู้รับโอนไม่สำเร็จ: ใบสลิปนี้ไม่ได้โอนเงินมายังบัญชีของร้านค้าผู้จำหน่าย (ชื่อผู้รับในสลิป: ${receiverName || "ไม่ระบุ"}, เลขบัญชีผู้รับ: ${rAcc || "ไม่ระบุ"}). โปรดโอนเงินมาที่ ${targetName} (${targetAcc}) เท่านั้น`
+              });
+            }
           } else {
             verifiedAmount = typeof data.amountInSlip === "number" ? data.amountInSlip : 0;
             transRef = "REF-THUNDER-" + Math.floor(100000 + Math.random() * 900000);
@@ -743,10 +770,7 @@ async function startServer() {
             receiverName = "นาย ธนกฤต ชูกำเนิด";
           }
 
-          if (
-          verifiedAmount > 0 &&
-          verifiedAmount === depositAmount
-          ) {
+          if (verifiedAmount > 0) {
             // Anti-Double Spend Guard
             const isDuplicate = db.transactions.some((tx: any) => tx.details && tx.details.includes(transRef));
             if (isDuplicate) {
@@ -876,6 +900,21 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
             const resultJson = JSON.parse(cleanText);
             
             if (resultJson.isValid && resultJson.amount > 0) {
+              const targetName = db.settings.bankAccountName || "ธนกฤต ชูกำเนิด";
+              const rNameGemini = resultJson.receiverName || "";
+              const nameTokens = ["ธนกฤต", "thanakrit", "chokumnerd", "ชูกำเนิด"];
+              const hasNameMatchGemini = rNameGemini && nameTokens.some(token => 
+                rNameGemini.toLowerCase().includes(token.toLowerCase())
+              );
+
+              if (!hasNameMatchGemini) {
+                console.warn(`Gemini Validation failed: Recipient [${rNameGemini}] does not match configured merchant [${targetName}].`);
+                return res.status(400).json({
+                  success: false,
+                  error: `ระบบตรวจสอบรูปสลิปแล้วพบข้อผิดพลาด: ชื่อผู้รับเงินปลายทางในสลิป (${rNameGemini || "ไม่พบข้อมูล"}) ไม่ตรงกับบัญชีของร้านค้า (${targetName}). กรุณาโอนเงินมาที่ร้านค้าเท่านั้น`
+                });
+              }
+
               const detectedAmount = parseFloat(resultJson.amount);
               const foundRef = resultJson.ref || "REF-GEMINI-" + Math.floor(100000 + Math.random() * 900000);
               

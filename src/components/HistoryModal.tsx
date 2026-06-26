@@ -2,19 +2,22 @@ import React, { useState, useEffect } from "react";
 import { User, Transaction, AppSettings, Review } from "../types";
 import { X, Calendar, DollarSign, Gift, Star, Clock, ShoppingBag, Eye, HeartHandshake, Truck } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Language, getTranslation } from "../lib/translations";
 
 interface HistoryModalProps {
   user: User;
   settings: AppSettings;
   onClose: () => void;
   onAddReview: (productId: string, rating: number, comment: string) => Promise<any>;
+  lang?: Language;
 }
 
 export default function HistoryModal({
   user,
   settings,
   onClose,
-  onAddReview
+  onAddReview,
+  lang = "th"
 }: HistoryModalProps) {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,14 +61,19 @@ export default function HistoryModal({
 
     // Map to updated products database
     let productId = "prod-3"; // Default Honey
-    if (tx.details.includes("ผ้าบาติก")) productId = "prod-1";
-    if (tx.details.includes("จักสาน")) productId = "prod-2";
-    if (tx.details.includes("สปา") || tx.details.includes("สบู่")) productId = "prod-4";
+    if (tx.details.includes("ผ้าบาติก") || tx.details.includes("Valorant")) productId = "prod-1";
+    if (tx.details.includes("จักสาน") || tx.details.includes("สคริปต์")) productId = "prod-2";
+    if (tx.details.includes("สปา") || tx.details.includes("สบู่") || tx.details.includes("VIP") || tx.details.includes("กล่องสุ่ม")) productId = "prod-4";
 
     setReviewLoading(true);
     try {
       await onAddReview(productId, reviewRating, reviewComment);
-      alert("บันทึกการรีวิวและมอบดวงดีให้กลุ่มวิสาหกิจน้ำน้อยประทับตราสำเร็จ! ขอบพระคุณอย่างยิ่งค่ะ");
+      const successAlert = lang === "zh" 
+        ? "评价保存成功！非常感谢您对喃内社区非遗匠人家庭的支持！"
+        : lang === "en"
+        ? "Review successfully recorded! Thank you very much for supporting our local artisans!"
+        : "บันทึกการรีวิวและมอบดวงดีให้กลุ่มวิสาหกิจน้ำน้อยประทับตราสำเร็จ! ขอบพระคุณอย่างยิ่งค่ะ";
+      alert(successAlert);
       setShowReviewForm(null);
       setReviewComment("");
     } catch (err) {
@@ -81,6 +89,46 @@ export default function HistoryModal({
     return "bg-[#8E6D4E]/10 text-[#8E6D4E] border border-[#8E6D4E]/20";
   };
 
+  const getTxTypeLabel = (type: string) => {
+    if (type === "topup_qr") {
+      return lang === "zh" ? "银行扫码充值" : lang === "en" ? "Bank QR Topup" : "กองทุนโอนกสิกรไทย";
+    }
+    if (type === "topup_angpao") {
+      return lang === "zh" ? "口令红包充值" : lang === "en" ? "Gift Code Topup" : "ซองอุปการะคลัง";
+    }
+    return lang === "zh" ? "非遗工艺认购" : lang === "en" ? "Product Support" : "สนับสนุนหัตถศิลป์";
+  };
+
+  const getOrderStatusLabel = (status: string) => {
+    if (status === "preparing") {
+      return lang === "zh" ? "📦 正在准备商品" : lang === "en" ? "📦 Preparing Order" : "📦 กำลังเตรียมจัดส่ง";
+    }
+    if (status === "shipped") {
+      return lang === "zh" ? "🚚 已发货" : lang === "en" ? "🚚 Shipped" : "🚚 ส่งแล้ว";
+    }
+    if (status === "delivered") {
+      return lang === "zh" ? "✅ 已送达成功" : lang === "en" ? "✅ Delivered Successfully" : "✅ จัดส่งสำเร็จ";
+    }
+    return lang === "zh" ? "❌ 订单已取消" : lang === "en" ? "❌ Order Cancelled" : "❌ ยกเลิกคำสั่งซื้อ";
+  };
+
+  const getLocalizedDetails = (details: string) => {
+    // Translate standard product names if found in the transaction log details
+    let loc = details;
+    if (lang === "en") {
+      loc = loc.replace("ID Valorant ไฮแรค มีมีดแรร์พรีเมียม", "High-Rank Valorant ID");
+      loc = loc.replace("สคริปต์ระบบร้านค้าอัตโนมัติ (PHP PDO Bootstrap 5)", "Automated Shop System Script");
+      loc = loc.replace("Discord Nitro (1 Month) Gift Link", "Discord Nitro (1 Month) Gift");
+      loc = loc.replace("กล่องสุ่ม VIP - โอกาสลุ้นรางวัลสุดสะท้านใจ!", "VIP Mystery Box (Gacha)");
+    } else if (lang === "zh") {
+      loc = loc.replace("ID Valorant ไฮแรค มีมีดแรร์พรีเมียม", "高段位 Valorant 账号（含稀有高级近战武器）");
+      loc = loc.replace("สคริปต์ระบบร้านค้าอัตโนมัติ (PHP PDO Bootstrap 5)", "自动售货商城系统源码 (PHP PDO)");
+      loc = loc.replace("Discord Nitro (1 Month) Gift Link", "Discord Nitro (1 个月) 礼物激活链接");
+      loc = loc.replace("กล่องสุ่ม VIP - โอกาสลุ้นรางวัลสุดสะท้านใจ!", "VIP 豪华盲盒 - 心跳暴击赢取神秘大奖！");
+    }
+    return loc;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-stone-950/70 backdrop-blur-sm">
       <motion.div
@@ -93,12 +141,14 @@ export default function HistoryModal({
         <div className="flex items-center justify-between pb-3.5 border-b border-[#8E6D4E]/10 flex-shrink-0">
           <div className="flex items-center gap-2">
             <Clock size={16} className={activeColor} />
-            <h3 className="font-serif font-bold text-[#4E3B2C] dark:text-[#EAE3DA] text-base">ประวัติสั่งอุดหนุนและสมทบทุนชุมชน</h3>
+            <h3 className="font-serif font-bold text-[#4E3B2C] dark:text-[#EAE3DA] text-base">
+              {lang === "zh" ? "个人订单及账户财务明细记录" : lang === "en" ? "Order & Credit Transactions Ledger" : "ประวัติสั่งอุดหนุนและสมทบทุนชุมชน"}
+            </h3>
           </div>
           <button 
             onClick={onClose}
             className="p-1 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-[#8E6D4E] transition-all cursor-pointer hover:rotate-90 duration-250"
-            title="ปิดหน้าต่างนี้"
+            title={getTranslation(lang, "close")}
           >
             <X size={16} />
           </button>
@@ -107,10 +157,14 @@ export default function HistoryModal({
         {/* List scroll panel */}
         <div className="flex-1 overflow-y-auto my-4 space-y-3.5 pr-1">
           {loading ? (
-            <p className="text-center py-12 text-stone-450 text-xs animate-pulse">กำลังเรียกดูบัญชีบัญชีส่วนบุคคล...</p>
+            <p className="text-center py-12 text-stone-400 text-xs animate-pulse">
+              {lang === "zh" ? "正在读取您的专属交易账单..." : lang === "en" ? "Loading your transaction histories..." : "กำลังเรียกข้อมูลธุรกรรมส่วนบุคคล..."}
+            </p>
           ) : txs.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-[#151210] rounded-2xl border border-[#8E6D4E]/15 shadow-sm">
-              <p className="text-stone-400 text-xs font-light">คุณยังไม่มีสถิติสั่งอุดหนุนสินค้าในประวัติขณะนี้</p>
+              <p className="text-stone-400 text-xs font-light">
+                {lang === "zh" ? "您当前在系统内暂无任何订单或充值记录。" : lang === "en" ? "You have no recorded transactions yet in your history." : "คุณยังไม่มีสถิติสั่งอุดหนุนสินค้าในประวัติขณะนี้"}
+              </p>
             </div>
           ) : (
             txs.map((tx, idx) => (
@@ -121,24 +175,30 @@ export default function HistoryModal({
                 {/* Upper bar */}
                 <div className="flex items-center justify-between">
                   <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-bold ${badgeColors(tx.type)}`}>
-                    {tx.type === "topup_qr" ? "กองทุนโอนกสิกรไทย" : tx.type === "topup_angpao" ? "ซองอุปการะคลัง" : "สนับสนุนหัตถศิลป์"}
+                    {getTxTypeLabel(tx.type)}
                   </span>
                   <span className="text-[10px] text-stone-400 font-medium">
-                    {new Date(tx.date).toLocaleDateString("th-TH")} {new Date(tx.date).toLocaleTimeString("th-TH")}
+                    {new Date(tx.date).toLocaleDateString(lang === "zh" ? "zh-CN" : lang === "en" ? "en-US" : "th-TH")} {new Date(tx.date).toLocaleTimeString(lang === "zh" ? "zh-CN" : lang === "en" ? "en-US" : "th-TH")}
                   </span>
                 </div>
 
                 {/* Spec */}
                 <div className="flex justify-between items-start gap-4">
                   <div>
-                    <p className="text-xs font-bold text-[#4E3B2C] dark:text-stone-200 leading-relaxed max-w-md">{tx.details}</p>
-                    <span className="text-[9.5px] text-stone-400 block mt-1 font-mono uppercase">รหัสอ้างอิงธุรกรรม: #{tx.id}</span>
+                    <p className="text-xs font-bold text-[#4E3B2C] dark:text-stone-200 leading-relaxed max-w-md">
+                      {getLocalizedDetails(tx.details)}
+                    </p>
+                    <span className="text-[9.5px] text-stone-400 block mt-1 font-mono uppercase">
+                      {lang === "zh" ? "交易流水号:" : lang === "en" ? "Transaction ID:" : "รหัสอ้างอิงธุรกรรม:"} #{tx.id}
+                    </span>
                   </div>
                   <div className="text-right">
                     <span className={`text-sm font-bold font-serif ${tx.type.startsWith("topup_") ? "text-emerald-600" : "text-[#8E6D4E]"}`}>
                       {tx.type.startsWith("topup_") ? "+" : "-"}{tx.amount.toLocaleString()} ฿
                     </span>
-                    <span className="block text-[8px] text-emerald-600 uppercase font-bold mt-1">ได้รับการบรรจุเรียบร้อย</span>
+                    <span className="block text-[8px] text-emerald-600 uppercase font-bold mt-1">
+                      {lang === "zh" ? "安全到账" : lang === "en" ? "Settled" : "ได้รับการบรรจุเรียบร้อย"}
+                    </span>
                   </div>
                 </div>
 
@@ -149,33 +209,32 @@ export default function HistoryModal({
                     <div className="flex items-center justify-between border-b border-[#8E6D4E]/10 pb-2">
                       <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-[#4E3B2C] dark:text-[#EAE3DA]">
                         <Truck size={12} className="text-[#8E6D4E]" />
-                        <span>สถานะการจัดส่งพัสดุ:</span>
+                        <span>{lang === "zh" ? "物流运送状态:" : lang === "en" ? "Delivery Status:" : "สถานะการจัดส่งพัสดุ:"}</span>
                         <span className={`px-2 py-0.5 rounded text-[9.5px] ${
                           tx.orderStatus === 'preparing' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' :
                           tx.orderStatus === 'shipped' ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' :
                           tx.orderStatus === 'delivered' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
                           'bg-red-500/10 text-red-600 border border-red-500/20'
                         }`}>
-                          {tx.orderStatus === 'preparing' ? '📦 กำลังเตรียมจัดส่ง' :
-                           tx.orderStatus === 'shipped' ? '🚚 ส่งแล้ว' :
-                           tx.orderStatus === 'delivered' ? '✅ จัดส่งสำเร็จ' :
-                           '❌ ยกเลิกคำสั่งซื้อ'}
+                          {getOrderStatusLabel(tx.orderStatus)}
                         </span>
                       </div>
                       
                       {tx.trackingNumber && (
                         <div className="flex items-center gap-1.5 text-[10px]">
-                          <span className="text-stone-400">เลขพัสดุ ({tx.trackingCarrier || "Flash Express"}):</span>
+                          <span className="text-stone-400">
+                            {lang === "zh" ? "单号" : lang === "en" ? "Tracking" : "เลขพัสดุ"} ({tx.trackingCarrier || "Flash Express"}):
+                          </span>
                           <span className="font-mono font-bold text-[#4E3B2C] dark:text-[#EAE3DA] select-all">{tx.trackingNumber}</span>
                           <button
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(tx.trackingNumber || "");
-                              alert("คัดลอกเลขพัสดุเรียบร้อยแล้วค่ะ!");
+                              alert(lang === "zh" ? "物流快递单号已成功复制到剪贴板！" : lang === "en" ? "Tracking number copied to clipboard!" : "คัดลอกเลขพัสดุเรียบร้อยแล้วค่ะ!");
                             }}
                             className="p-0.5 px-1.5 bg-[#8E6D4E]/10 hover:bg-[#8E6D4E]/20 text-[#8E6D4E] rounded text-[8.5px] font-bold cursor-pointer transition-all"
                           >
-                            คัดลอก
+                            {lang === "zh" ? "复制" : lang === "en" ? "Copy" : "คัดลอก"}
                           </button>
                         </div>
                       )}
@@ -200,12 +259,12 @@ export default function HistoryModal({
                             <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
                               ['preparing', 'shipped', 'delivered'].includes(tx.orderStatus)
                                 ? "bg-[#8E6D4E] text-white"
-                                : "bg-stone-200 dark:bg-stone-850 text-stone-450"
+                                : "bg-stone-200 dark:bg-stone-850 text-stone-400"
                             }`}>
                               1
                             </div>
                             <span className={['preparing', 'shipped', 'delivered'].includes(tx.orderStatus) ? "text-[#8E6D4E] font-bold" : ""}>
-                              รับออเดอร์
+                              {lang === "zh" ? "已接单" : lang === "en" ? "Ordered" : "รับออเดอร์"}
                             </span>
                           </div>
 
@@ -216,12 +275,12 @@ export default function HistoryModal({
                                 ? "bg-[#8E6D4E] text-white"
                                 : tx.orderStatus === 'preparing'
                                 ? "bg-amber-500/25 border border-amber-500 text-amber-600 font-bold animate-pulse"
-                                : "bg-stone-200 dark:bg-stone-850 text-stone-450"
+                                : "bg-stone-200 dark:bg-stone-850 text-stone-400"
                             }`}>
                               2
                             </div>
                             <span className={['shipped', 'delivered'].includes(tx.orderStatus) ? "text-[#8E6D4E] font-bold" : ""}>
-                              เตรียมของ
+                              {lang === "zh" ? "备货中" : lang === "en" ? "Processing" : "เตรียมของ"}
                             </span>
                           </div>
 
@@ -232,12 +291,12 @@ export default function HistoryModal({
                                 ? "bg-[#8E6D4E] text-white"
                                 : tx.orderStatus === 'shipped'
                                 ? "bg-blue-500/25 border border-blue-500 text-blue-600 font-bold animate-pulse"
-                                : "bg-stone-200 dark:bg-stone-850 text-stone-450"
+                                : "bg-stone-200 dark:bg-stone-850 text-stone-400"
                             }`}>
                               3
                             </div>
                             <span className={tx.orderStatus === 'shipped' ? "text-blue-600 font-bold" : tx.orderStatus === 'delivered' ? "text-[#8E6D4E] font-bold" : ""}>
-                              จัดส่งพัสดุ
+                              {lang === "zh" ? "已发货" : lang === "en" ? "Shipped" : "จัดส่งพัสดุ"}
                             </span>
                           </div>
 
@@ -246,12 +305,12 @@ export default function HistoryModal({
                             <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
                               tx.orderStatus === 'delivered'
                                 ? "bg-emerald-600 text-white font-bold"
-                                : "bg-stone-200 dark:bg-stone-850 text-stone-450"
+                                : "bg-stone-200 dark:bg-stone-850 text-stone-400"
                             }`}>
                               ✓
                             </div>
                             <span className={tx.orderStatus === 'delivered' ? "text-emerald-600 font-bold" : ""}>
-                              สำเร็จแล้ว
+                              {lang === "zh" ? "已签收" : lang === "en" ? "Delivered" : "สำเร็จแล้ว"}
                             </span>
                           </div>
                         </div>
@@ -261,12 +320,14 @@ export default function HistoryModal({
                     {/* Timeline Updates */}
                     {tx.statusUpdates && tx.statusUpdates.length > 0 && (
                       <div className="border-t border-[#8E6D4E]/10 pt-2 space-y-1.5">
-                        <span className="text-[8.5px] font-bold uppercase tracking-wider text-stone-400 block">ประวัติการเดินทางของพัสดุ (Status Timeline):</span>
+                        <span className="text-[8.5px] font-bold uppercase tracking-wider text-stone-400 block">
+                          {lang === "zh" ? "物流实时轨迹详情 (Status Timeline):" : lang === "en" ? "Detailed Tracking Timeline:" : "ประวัติการเดินทางของพัสดุ (Status Timeline):"}
+                        </span>
                         <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
                           {tx.statusUpdates.map((update: any, idx: number) => (
                             <div key={idx} className="flex gap-2 text-[9.5px] leading-relaxed">
                               <span className="text-stone-450 dark:text-stone-500 font-mono flex-shrink-0">
-                                {new Date(update.date).toLocaleString("th-TH", {
+                                {new Date(update.date).toLocaleString(lang === "zh" ? "zh-CN" : lang === "en" ? "en-US" : "th-TH", {
                                   month: "short",
                                   day: "numeric",
                                   hour: "2-digit",
@@ -290,7 +351,9 @@ export default function HistoryModal({
                     {showReviewForm === tx.id ? (
                       <form onSubmit={(e) => handleReviewSubmit(e, tx)} className="w-full space-y-3 pt-2">
                         <div className="flex items-center justify-between">
-                          <label className="text-[10px] text-stone-450 font-bold">1. เลือกให้คะแนนความประณีตของชิ้นงาน</label>
+                          <label className="text-[10px] text-stone-450 font-bold">
+                            {lang === "zh" ? "1. 选择您对本次非遗手作质量的评分" : lang === "en" ? "1. Rate the artistry of this product" : "1. เลือกให้คะแนนความประณีตของชิ้นงาน"}
+                          </label>
                           <div className="flex text-amber-500 gap-1">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <button
@@ -305,10 +368,18 @@ export default function HistoryModal({
                           </div>
                         </div>
                         <div>
-                          <label className="text-[10px] text-stone-450 font-bold block mb-1">2. เขียนความเห็นชื่นชมมงคลศิลปะชิ้นนี้</label>
-                           <textarea
+                          <label className="text-[10px] text-stone-450 font-bold block mb-1">
+                            {lang === "zh" ? "2. 撰写买家支持寄语或真实体验评论" : lang === "en" ? "2. Write review comments and wishes to artisans" : "2. เขียนความเห็นชื่นชมมงคลศิลปะชิ้นนี้"}
+                          </label>
+                          <textarea
                             required
-                            placeholder="ผ้าเขียนลายบาติกประณีตสวยงามมากเลยค่ะ สีครามธรรมชาติสว่างนวลตาตัดเย็บแล้วออกมางามสง่า อนาคตจะอุดหนุนใหม่แน่นอนค่ะ!"
+                            placeholder={
+                              lang === "zh" 
+                                ? "宝贝做工非常精细，巴迪克蜡染的手绘图案独具匠心，包装也非常低碳环保，赞一个！" 
+                                : lang === "en"
+                                ? "This batik art is extremely beautiful and well-made. Eco-friendly organic packaging was great. Will buy again!"
+                                : "ผ้าเขียนลายบาติกประณีตสวยงามมากเลยค่ะ สีครามธรรมชาติสว่างนวลตาตัดเย็บแล้วออกมางามสง่า อนาคตจะอุดหนุนใหม่แน่นอนค่ะ!"
+                            }
                             value={reviewComment}
                             onChange={(e) => setReviewComment(e.target.value)}
                             rows={2}
@@ -321,14 +392,16 @@ export default function HistoryModal({
                             onClick={() => setShowReviewForm(null)}
                             className="bg-stone-100 dark:bg-stone-850 py-1.5 px-3 rounded-lg text-[10px] text-stone-500 cursor-pointer"
                           >
-                            ยกเลิก
+                            {lang === "zh" ? "取消" : lang === "en" ? "Cancel" : "ยกเลิก"}
                           </button>
                           <button
                             type="submit"
                             disabled={reviewLoading}
                             className="bg-[#8E6D4E] hover:bg-[#725437] text-white font-bold py-1.5 px-4 rounded-lg text-[10px] cursor-pointer"
                           >
-                            {reviewLoading ? "กำลังส่งบันทึก..." : "ส่งคำวิจารณ์และคำอวยพร"}
+                            {reviewLoading 
+                              ? (lang === "zh" ? "发送中..." : lang === "en" ? "Submitting..." : "กำลังส่งบันทึก...") 
+                              : (lang === "zh" ? "提交评价" : lang === "en" ? "Submit Review" : "ส่งคำวิจารณ์และคำอวยพร")}
                           </button>
                         </div>
                       </form>
@@ -338,7 +411,9 @@ export default function HistoryModal({
                         className="py-1 px-2.5 text-[10px] rounded-lg border border-[#8E6D4E]/15 hover:bg-[#8E6D4E]/10 transition-all text-[#715437] dark:text-stone-300 flex items-center gap-1 cursor-pointer"
                       >
                         <HeartHandshake size={11} className={activeColor} />
-                        <span>เขียนรีวิวให้คะแนนชิ้นงานชาวบ้าน</span>
+                        <span>
+                          {lang === "zh" ? "为本款工艺品撰写口碑评价" : lang === "en" ? "Write Review for Artisans" : "เขียนรีวิวให้คะแนนชิ้นงานชาวบ้าน"}
+                        </span>
                       </button>
                     )}
                   </div>

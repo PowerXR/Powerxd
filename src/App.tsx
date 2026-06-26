@@ -802,6 +802,7 @@ export default function App() {
                 reviews={reviews}
                 onClose={() => setSelectedProduct(null)}
                 onPurchase={handlePurchaseProduct}
+                lang={lang}
               />
             )}
 
@@ -826,6 +827,7 @@ export default function App() {
                 settings={settings}
                 onClose={() => setHistoryModalOpen(false)}
                 onAddReview={handleAddReview}
+                lang={lang}
               />
             )}
 

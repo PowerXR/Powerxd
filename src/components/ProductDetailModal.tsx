@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Product, AppSettings, Coupon, Review, User } from "../types";
 import { X, Calendar, MessageSquare, ShieldAlert, Star, AlertCircle, ShoppingCart, Ticket, Sparkles, Check, Heart, Feather } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Language, getTranslation, getTranslatedProduct } from "../lib/translations";
 
 interface ProductDetailModalProps {
   product: Product;
@@ -15,16 +16,20 @@ interface ProductDetailModalProps {
     couponCode: string,
     shippingDetails?: { name: string; phone: string; address: string; zip: string; method: string; fee: number }
   ) => Promise<any>;
+  lang?: Language;
 }
 
 export default function ProductDetailModal({
-  product,
+  product: originalProduct,
   user,
   settings,
   reviews,
   onClose,
-  onPurchase
+  onPurchase,
+  lang = "th"
 }: ProductDetailModalProps) {
+  const product = getTranslatedProduct(originalProduct, lang);
+
   const [activeTab, setActiveTab] = useState<"details" | "reviews">("details");
   const [quantity, setQuantity] = useState<number>(1);
   const [couponInput, setCouponInput] = useState<string>("");
@@ -46,47 +51,41 @@ export default function ProductDetailModal({
     economy: 30
   };
 
-  const currentShippingFee = shippingFees[shippingMethod];
+  const currentShippingFee = shippingFees[shippingMethod] || 45;
 
-  // Filter reviews for this product
   const productReviews = reviews.filter((r) => r.productId === product.id);
 
-  // Recalculate price
-  const isOutOfStock = product.stock.length < 1;
-  const maxStock = product.stock.length;
-  const unitPrice = product.price;
-  const originalTotalPrice = unitPrice * quantity;
+  const isOutOfStock = !product.stock || product.stock.length === 0;
+  const maxStock = product.stock ? product.stock.length : 0;
 
+  const originalTotalPrice = product.price * quantity;
   let finalTotalPrice = originalTotalPrice;
+
   if (couponApplied) {
     if (couponApplied.discountPercent > 0) {
-      finalTotalPrice = parseFloat((originalTotalPrice * (1 - couponApplied.discountPercent / 100)).toFixed(2));
+      finalTotalPrice = originalTotalPrice * (1 - couponApplied.discountPercent / 100);
     } else if (couponApplied.discountBaht > 0) {
       finalTotalPrice = Math.max(0, originalTotalPrice - couponApplied.discountBaht);
     }
   }
 
   const handleApplyCoupon = async () => {
-    if (!couponInput) return;
+    if (!couponInput.trim()) return;
     setVerifyLoading(true);
     setCouponError("");
-    setCouponApplied(null);
-
     try {
-      const res = await fetch(`/api/coupons/verify?code=${encodeURIComponent(couponInput)}`);
-      const text = await res.text();
-      if (!text || text.trim().startsWith("<")) {
-        setCouponError("รูปแบบรหัสส่วนลดไม่ถูกต้อง");
-        return;
-      }
-      const data = JSON.parse(text);
-      if (!res.ok || !data.success) {
-        setCouponError(data.error || "รหัสส่วนลดไม่ถูกต้องหรือพ้นการใช้งานแล้ว");
+      const resp = await fetch(`/api/coupons/verify?code=${encodeURIComponent(couponInput)}&price=${originalTotalPrice}`);
+      const data = await resp.json();
+      if (data.success) {
+        setCouponApplied(data.coupon);
+        setCouponError("");
       } else {
-        setCouponApplied(data);
+        setCouponError(data.message || "Coupon invalid");
+        setCouponApplied(null);
       }
-    } catch (e) {
-      setCouponError("ไม่สามารถสื่อสารกับเซิร์ฟเวอร์");
+    } catch (err) {
+      setCouponError("Error verifying coupon");
+      setCouponApplied(null);
     } finally {
       setVerifyLoading(false);
     }
@@ -95,17 +94,17 @@ export default function ProductDetailModal({
   const handlePurchaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      alert("กรุณาเข้าสู่ระบบก่อนอุดหนุนสินค้าสิ่งวิเศษของชุมชน");
+      alert(getTranslation(lang, "loginFirstAlert"));
       return;
     }
     if (isOutOfStock) return;
     if (quantity > maxStock) {
-      alert("ความต้องการซื้อเกินจำนวนที่มีในคลังขณะนี้");
+      alert(getTranslation(lang, "exceededStockAlert"));
       return;
     }
 
     if (!shippingName.trim() || !shippingPhone.trim() || !shippingAddress.trim() || !shippingZip.trim()) {
-      alert("⚠️ กรุณากรอกข้อมูลจัดส่งและระบุเบอร์ติดต่อให้ครบถ้วนก่อนส่งใบสั่งซื้อนะคะ (ระบบจัดส่ง Shopee Delivery)");
+      alert(getTranslation(lang, "completeShippingAlert"));
       return;
     }
 
@@ -148,14 +147,14 @@ export default function ProductDetailModal({
         <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#8E6D4E]/10 relative z-10 flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-[#8E6D4E]/10 text-[#8E6D4E] border border-[#8E6D4E]/20">
-              หัตถศิลป์ล้ำค่าชุมชนน้ำน้อย
+              {getTranslation(lang, "valFineCraft")}
             </span>
-            <span className="text-xs text-stone-500">คงเหลือในคลัง: {product.stock.length} ชิ้น</span>
+            <span className="text-xs text-stone-500">{getTranslation(lang, "stockCount").replace("{count}", String(product.stock ? product.stock.length : 0))}</span>
           </div>
           <button 
             onClick={onClose}
             className="p-1.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-[#8E6D4E] transition-all cursor-pointer hover:rotate-90 duration-250"
-            title="ปิดหน้าต่างนี้"
+            title={getTranslation(lang, "close")}
           >
             <X size={18} />
           </button>
@@ -174,9 +173,9 @@ export default function ProductDetailModal({
             <div className="p-4 rounded-2xl border border-[#8E6D4E]/25 bg-[#FCFAF7] dark:bg-[#201C18] text-[#8E6D4E] flex gap-2.5 items-start">
               <Feather size={16} className="mt-0.5 flex-shrink-0 text-[#8E6D4E]" />
               <div>
-                <h5 className="text-[11px] font-bold uppercase text-[#8E6D4E] mb-0.5">การรับรองงานฝีมือแท้ 100%</h5>
+                <h5 className="text-[11px] font-bold uppercase text-[#8E6D4E] mb-0.5">{getTranslation(lang, "certGenuine")}</h5>
                 <p className="text-[10px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  ผลิตภัณฑ์ชิ้นนี้เขียนลายและถักทอด้วยมือจากช่างท้องถิ่นน้ำน้อย หากพบตำหนิชำรุดจากการผลิตใดๆ ชุมชนยินดีเปลี่ยนชิ้นใหม่ในเงื่อนไข 7 วัน เพื่อพิทักษ์ความพึงพอใจของท่านผู้มีอุปการคุณสูงสุด
+                  {getTranslation(lang, "certDesc")}
                 </p>
               </div>
             </div>
@@ -191,19 +190,21 @@ export default function ProductDetailModal({
               <div className="flex gap-4 border-b border-[#8E6D4E]/10 mt-4 mb-4">
                 <button 
                   onClick={() => setActiveTab("details")}
+                  type="button"
                   className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer ${
                     activeTab === "details" ? `${activeColor} border-[#8E6D4E]` : 'text-stone-400 border-transparent hover:text-[#8E6D4E]'
                   }`}
                 >
-                  รายละเอียดผลิตภัณฑ์
+                  {getTranslation(lang, "productSpecsTab")}
                 </button>
                 <button 
                   onClick={() => setActiveTab("reviews")}
+                  type="button"
                   className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${
                     activeTab === "reviews" ? `${activeColor} border-[#8E6D4E]` : 'text-stone-400 border-transparent hover:text-[#8E6D4E]'
                   }`}
                 >
-                  <span>รีวิวการใช้สอบคุณหลวง ({productReviews.length})</span>
+                  <span>{getTranslation(lang, "reviewsTab").replace("{count}", String(productReviews.length))}</span>
                   <div className="flex items-center text-amber-550 text-[10px]">
                     <Star size={10} className="fill-current text-amber-500" />
                     <span className="ml-0.5 text-stone-600 dark:text-stone-300">{productReviews.length > 0 ? (productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length).toFixed(1) : "5.0"}</span>
@@ -223,9 +224,9 @@ export default function ProductDetailModal({
                       <div>
                         <p className="text-stone-500">{product.description}</p>
                         <ul className="list-disc pl-5 mt-2 space-y-1 text-stone-400">
-                          <li>สิทธิประโยชน์ร่วมทอดกฐินและส่งเสริมสัมมาชีพรายย่อยประจำปี</li>
-                          <li>หีบห่อด้วยวัสดุธรรมชาติรักสิ่งแวดล้อมเพื่อลดขยะพลาสติก</li>
-                          <li>ยินดีเปลี่ยนรหัสจัดส่งหรือตรวจสอบสินค้าได้อย่างสะดวกรวดเร็วทางหน้าประวัติ</li>
+                          <li>{getTranslation(lang, "benefitCharity")}</li>
+                          <li>{getTranslation(lang, "benefitEco")}</li>
+                          <li>{getTranslation(lang, "benefitTrack")}</li>
                         </ul>
                       </div>
                     )}
@@ -233,7 +234,7 @@ export default function ProductDetailModal({
                 ) : (
                   <div className="space-y-3 mt-1">
                     {productReviews.length === 0 ? (
-                      <div className="text-center py-6 text-stone-400 text-xs font-light">ขณะนี้ยังไม่มีรีวิวเพิ่มเติมสำหรับการสั่งสินค้ารอบนี้ อุดหนุนแล้วมาเขียนรีวิวท่านแรกได้เลยค่ะ!</div>
+                      <div className="text-center py-6 text-stone-400 text-xs font-light">{getTranslation(lang, "noReviewsYet")}</div>
                     ) : (
                       productReviews.map((rev) => (
                         <div key={rev.id} className="p-4 rounded-2xl bg-white dark:bg-[#151210] border border-[#8E6D4E]/10 space-y-1.5 shadow-sm">
@@ -246,7 +247,7 @@ export default function ProductDetailModal({
                             </div>
                           </div>
                           <p className="text-xs text-stone-500 dark:text-stone-400 font-light">{rev.comment}</p>
-                          <span className="text-[9px] text-stone-400 block">{new Date(rev.date).toLocaleDateString("th-TH")}</span>
+                          <span className="text-[9px] text-stone-400 block">{new Date(rev.date).toLocaleDateString(lang === "zh" ? "zh-CN" : lang === "en" ? "en-US" : "th-TH")}</span>
                         </div>
                       ))
                     )}
@@ -264,7 +265,7 @@ export default function ProductDetailModal({
                   <div className="flex items-center justify-between">
                     <span className="text-[#4E3B2C] dark:text-stone-300 text-xs font-bold flex items-center gap-1">
                       <Ticket size={14} className="text-[#8E6D4E]" />
-                      <span>กรอกรหัสส่วนลดพิเศษชุมชน (Coupon Code)</span>
+                      <span>{getTranslation(lang, "couponFormTitle")}</span>
                     </span>
                     {couponApplied && (
                       <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg animate-pulse">
@@ -276,7 +277,7 @@ export default function ProductDetailModal({
                   <div className="flex gap-2">
                     <input 
                       type="text"
-                      placeholder="รหัสลดพิเศษ เช่น SUPPORTNAMNOI, MUNICIPAL100..."
+                      placeholder={getTranslation(lang, "couponPlaceholder")}
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                       disabled={purchaseLoading}
@@ -288,7 +289,7 @@ export default function ProductDetailModal({
                       disabled={verifyLoading || purchaseLoading}
                       className="bg-stone-100 dark:bg-stone-800 border border-[#8E6D4E]/20 hover:bg-[#8E6D4E]/10 disabled:opacity-50 text-[#715437] dark:text-stone-300 text-xs font-bold px-4 rounded-xl transition-colors cursor-pointer"
                     >
-                      {verifyLoading ? "ตรวจบิล..." : "ใช้รหัส"}
+                      {verifyLoading ? getTranslation(lang, "couponVerifyBtn") : getTranslation(lang, "couponApplyBtn")}
                     </button>
                   </div>
                   {couponError && <p className="text-[10px] text-red-500 font-semibold">{couponError}</p>}
@@ -298,27 +299,27 @@ export default function ProductDetailModal({
                 <div className="bg-[#FAF7F2]/60 dark:bg-[#1C1815]/60 p-4 rounded-2xl border border-[#8E6D4E]/15 space-y-3 text-xs">
                   <div className="flex items-center gap-1.5 text-[#8E6D4E] font-bold pb-1.5 border-b border-[#8E6D4E]/10">
                     <span className="text-base">🚚</span>
-                    <h4 className="font-serif text-sm">ข้อมูลที่อยู่จัดส่งสินค้าชุมชน (Shopee Delivery Service)</h4>
+                    <h4 className="font-serif text-sm">{getTranslation(lang, "shippingTitle")}</h4>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] text-stone-500 font-bold mb-1">ชื่อ-นามสกุล ผู้รับสินค้า *</label>
+                      <label className="block text-[10px] text-stone-500 font-bold mb-1">{getTranslation(lang, "shippingNameLabel")}</label>
                       <input 
                         type="text"
                         required
-                        placeholder="เช่น นายแสนดี พรมิ่งมงคล"
+                        placeholder={getTranslation(lang, "shippingNamePlaceholder")}
                         value={shippingName}
                         onChange={(e) => setShippingName(e.target.value)}
                         className="w-full bg-white dark:bg-[#151210] border border-[#8E6D4E]/15 rounded-xl p-2.5 text-[#4E3B2C] dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#8E6D4E]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-stone-500 font-bold mb-1">เบอร์โทรศัพท์ติดต่อ *</label>
+                      <label className="block text-[10px] text-stone-500 font-bold mb-1">{getTranslation(lang, "shippingPhoneLabel")}</label>
                       <input 
                         type="tel"
                         required
-                        placeholder="เช่น 081-234-5678"
+                        placeholder={getTranslation(lang, "shippingPhonePlaceholder")}
                         value={shippingPhone}
                         onChange={(e) => setShippingPhone(e.target.value)}
                         className="w-full bg-white dark:bg-[#151210] border border-[#8E6D4E]/15 rounded-xl p-2.5 text-[#4E3B2C] dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#8E6D4E]"
@@ -327,11 +328,11 @@ export default function ProductDetailModal({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-stone-500 font-bold mb-1">ที่อยู่นำส่งโดยละเอียด (เลขที่รหัส, ถนน, ซอย, ตำบล/อำเภอ, จังหวัด) *</label>
+                    <label className="block text-[10px] text-stone-500 font-bold mb-1">{getTranslation(lang, "shippingAddressLabel")}</label>
                     <textarea 
                       required
                       rows={2}
-                      placeholder="เช่น 99/9 หมู่ 2 ต.ปาดังเบซาร์ อ.สะเดา จ.สงขลา"
+                      placeholder={getTranslation(lang, "shippingAddressPlaceholder")}
                       value={shippingAddress}
                       onChange={(e) => setShippingAddress(e.target.value)}
                       className="w-full bg-white dark:bg-[#151210] border border-[#8E6D4E]/15 rounded-xl p-2.5 text-[#4E3B2C] dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#8E6D4E] resize-none"
@@ -340,18 +341,18 @@ export default function ProductDetailModal({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] text-stone-500 font-bold mb-1">รหัสไปรษณีย์ *</label>
+                      <label className="block text-[10px] text-stone-500 font-bold mb-1">{getTranslation(lang, "shippingZipLabel")}</label>
                       <input 
                         type="text"
                         required
-                        placeholder="เช่น 90110"
+                        placeholder={getTranslation(lang, "shippingZipPlaceholder")}
                         value={shippingZip}
                         onChange={(e) => setShippingZip(e.target.value)}
                         className="w-full bg-white dark:bg-[#151210] border border-[#8E6D4E]/15 rounded-xl p-2.5 text-[#4E3B2C] dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#8E6D4E]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-[#8E6D4E] font-bold mb-1">ตัวเลือกช่องทางส่งพัสดุ *</label>
+                      <label className="block text-[10px] text-[#8E6D4E] font-bold mb-1">{getTranslation(lang, "shippingMethodLabel")}</label>
                       <select
                         value={shippingMethod}
                         onChange={(e) => setShippingMethod(e.target.value as any)}
@@ -368,20 +369,20 @@ export default function ProductDetailModal({
                 {/* Pricing & buy actions bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
                   <div className="space-y-0.5">
-                    <span className="text-[10px] uppercase font-bold text-stone-450 block font-serif text-slate-400">มูลค่าสนับสนุนรวมค่าจัดส่งสุทธิ</span>
+                    <span className="text-[10px] uppercase font-bold text-[#8E6D4E] block font-serif">{getTranslation(lang, "totalSupportLabel")}</span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-3xl font-serif font-black text-[#8E6D4E] tracking-tight">
                         {(finalTotalPrice + currentShippingFee).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
-                      <span className="text-[#8E6D4E] text-xs">บาท (THB)</span>
+                      <span className="text-[#8E6D4E] text-xs">{getTranslation(lang, "baht")}</span>
                       {couponApplied && (
                         <span className="text-xs text-stone-400 line-through">
-                          {(originalTotalPrice + currentShippingFee).toFixed(2)} บาท
+                          {(originalTotalPrice + currentShippingFee).toFixed(2)} {getTranslation(lang, "baht")}
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-stone-450 text-stone-400 font-light">
-                      (ค่าสินค้า {finalTotalPrice.toFixed(2)} ฿ + พัสดุ {currentShippingFee.toFixed(2)} ฿)
+                    <p className="text-[10px] text-stone-400 font-light">
+                      ({getTranslation(lang, "itemPriceLabel")} {finalTotalPrice.toFixed(2)} ฿ + {getTranslation(lang, "shippingFeeLabel")} {currentShippingFee.toFixed(2)} ฿)
                     </p>
                   </div>
 
@@ -415,7 +416,7 @@ export default function ProductDetailModal({
                       }`}
                     >
                       <ShoppingCart size={15} />
-                      <span>{isOutOfStock ? "สินค้าหมด" : "สนับสนุนซื้อสินค้านี้"}</span>
+                      <span>{isOutOfStock ? getTranslation(lang, "outOfStockBtn") : getTranslation(lang, "buyNowBtn")}</span>
                     </button>
                   </div>
                 </div>

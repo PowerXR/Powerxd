@@ -118,7 +118,41 @@ export const translations = {
     statsQuestion: "ต้องการร่วมสัมผัสและสืบสานวิถีชุมชนน้ำน้อยด้วยตนเอง?",
     statsBody: "ตำบลน้ำน้อย อำเภอหาดใหญ่ เปิดต้อนรับการศึกษาดูงานจากโรงเรียน สถาบันอุดมศึกษา และนักท่องเที่ยวเชิงอนุรักษ์ทุกท่าน โดยกลุ่มทอผ้าบาติกและจักสานใบลานของเราจัดคลาสเวิร์กชอปสาธิตฟรีโดยไม่มีค่าใช้จ่ายเพิ่มเติม",
     statsReserveBtn: "จองคิวศึกษาดูงานฟรี",
-    statsLocBtn: "แชร์พิกัดนำทางตำบล"
+    statsLocBtn: "แชร์พิกัดนำทางตำบล",
+
+    // Product Detail and Checkout Form Additions
+    valFineCraft: "หัตถศิลป์ล้ำค่าชุมชนน้ำน้อย",
+    stockCount: "คงเหลือในคลัง: {count} ชิ้น",
+    certGenuine: "การรับรองงานฝีมือแท้ 100%",
+    certDesc: "ผลิตภัณฑ์ชิ้นนี้เขียนลายและถักทอด้วยมือจากช่างท้องถิ่นน้ำน้อย หากพบตำหนิชำรุดจากการผลิตใดๆ ชุมชนยินดีเปลี่ยนชิ้นใหม่ในเงื่อนไข 7 วัน เพื่อพิทักษ์ความพึงพอใจของท่านผู้มีอุปการคุณสูงสุด",
+    productSpecsTab: "รายละเอียดผลิตภัณฑ์",
+    reviewsTab: "รีวิวการใช้งานคัดสรร ({count})",
+    noReviewsYet: "ขณะนี้ยังไม่มีรีวิวเพิ่มเติมสำหรับการสั่งสินค้ารอบนี้ อุดหนุนแล้วมาเขียนรีวิวท่านแรกได้เลยค่ะ!",
+    couponFormTitle: "กรอกรหัสส่วนลดพิเศษชุมชน (Coupon Code)",
+    couponPlaceholder: "รหัสลดพิเศษ เช่น SUPPORTNAMNOI, MUNICIPAL100...",
+    couponVerifyBtn: "ตรวจบิล...",
+    couponApplyBtn: "ใช้รหัส",
+    shippingTitle: "ข้อมูลที่อยู่จัดส่งสินค้าชุมชน (Shopee Delivery Service)",
+    shippingNameLabel: "ชื่อ-นามสกุล ผู้รับสินค้า *",
+    shippingNamePlaceholder: "เช่น นายแสนดี พรมิ่งมงคล",
+    shippingPhoneLabel: "เบอร์โทรศัพท์ติดต่อ *",
+    shippingPhonePlaceholder: "เช่น 081-234-5678",
+    shippingAddressLabel: "ที่อยู่นำส่งโดยละเอียด (เลขที่รหัส, ถนน, ซอย, ตำบล/อำเภอ, จังหวัด) *",
+    shippingAddressPlaceholder: "เช่น 99/9 หมู่ 2 ต.ปาดังเบซาร์ อ.สะเดา จ.สงขลา",
+    shippingZipLabel: "รหัสไปรษณีย์ *",
+    shippingZipPlaceholder: "เช่น 90110",
+    shippingMethodLabel: "ตัวเลือกช่องทางส่งพัสดุ *",
+    totalSupportLabel: "มูลค่าสนับสนุนรวมค่าจัดส่งสุทธิ",
+    itemPriceLabel: "ค่าสินค้า",
+    shippingFeeLabel: "พัสดุ",
+    outOfStockBtn: "สินค้าหมด",
+    buyNowBtn: "สนับสนุนซื้อสินค้านี้",
+    loginFirstAlert: "กรุณาเข้าสู่ระบบก่อนอุดหนุนสินค้าสิ่งวิเศษของชุมชน",
+    exceededStockAlert: "ความต้องการซื้อเกินจำนวนที่มีในคลังขณะนี้",
+    completeShippingAlert: "⚠️ กรุณากรอกข้อมูลจัดส่งและระบุเบอร์ติดต่อให้ครบถ้วนก่อนส่งใบสั่งซื้อนะคะ (ระบบจัดส่ง Shopee Delivery)",
+    benefitCharity: "สิทธิประโยชน์ร่วมทอดกฐินและส่งเสริมสัมมาชีพรายย่อยประจำปี",
+    benefitEco: "หีบห่อด้วยวัสดุธรรมชาติรักสิ่งแวดล้อมเพื่อลดขยะพลาสติก",
+    benefitTrack: "ยินดีเปลี่ยนรหัสจัดส่งหรือตรวจสอบสินค้าได้อย่างสะดวกรวดเร็วทางหน้าประวัติ"
   },
   en: {
     // Nav
@@ -236,7 +270,41 @@ export const translations = {
     statsQuestion: "Want to experience and preserve the Nam Noi way of life yourself?",
     statsBody: "Nam Noi Subdistrict, Hat Yai District welcomes study tours, educational institutions, and eco-tourists. Our local batik and palm weaving guilds organize free demonstration workshops.",
     statsReserveBtn: "Book Free Study Tour",
-    statsLocBtn: "Share Subdistrict Coordinates"
+    statsLocBtn: "Share Subdistrict Coordinates",
+
+    // Product Detail and Checkout Form Additions
+    valFineCraft: "Nam Noi Valuable Local Crafts",
+    stockCount: "In stock: {count} items",
+    certGenuine: "100% Authentic Handcraft Guarantee",
+    certDesc: "This item is handdrawn and handwoven by local artisans of Nam Noi. In case of any production defect, the community is happy to exchange it within 7 days to protect your utmost satisfaction.",
+    productSpecsTab: "Product Specifications",
+    reviewsTab: "Customer Reviews ({count})",
+    noReviewsYet: "There are no reviews for this product yet. Be the first to share your experience after purchasing!",
+    couponFormTitle: "Enter Community Discount Coupon Code",
+    couponPlaceholder: "e.g., NEWUSER, LUCKY50...",
+    couponVerifyBtn: "Check...",
+    couponApplyBtn: "Apply",
+    shippingTitle: "Shipping Address Details (Shopee Delivery Service)",
+    shippingNameLabel: "Recipient Name *",
+    shippingNamePlaceholder: "e.g., John Doe",
+    shippingPhoneLabel: "Contact Phone *",
+    shippingPhonePlaceholder: "e.g., 081-234-5678",
+    shippingAddressLabel: "Detailed Shipping Address (House No, Street, Sub-district, District, Province) *",
+    shippingAddressPlaceholder: "e.g., 99/9 Moo 2, Padang Besar, Sadao, Songkhla",
+    shippingZipLabel: "Postal Code *",
+    shippingZipPlaceholder: "e.g., 90110",
+    shippingMethodLabel: "Select Delivery Service Option *",
+    totalSupportLabel: "Grand Total Support (Including Shipping)",
+    itemPriceLabel: "Item Price",
+    shippingFeeLabel: "Delivery",
+    outOfStockBtn: "Out of Stock",
+    buyNowBtn: "Purchase & Support",
+    loginFirstAlert: "Please login to your account before purchasing community crafts.",
+    exceededStockAlert: "Requested quantity exceeds available stock.",
+    completeShippingAlert: "⚠️ Please fill in all shipping details and contact phone number before placing your order.",
+    benefitCharity: "Support annual charity contributions and micro-entrepreneurs.",
+    benefitEco: "Eco-friendly packaging using natural organic materials to reduce plastic waste.",
+    benefitTrack: "Track and verify shipment code status easily from your history page."
   },
   zh: {
     // Nav
@@ -354,9 +422,156 @@ export const translations = {
     statsQuestion: "想要亲身体验并延续喃内区非遗文化传承吗？",
     statsBody: "合艾郡喃内区诚挚欢迎各大学校、科研机构及生态环保旅行团队前来考察与研学。我们的蜡染手绘和棕榈叶手工编织工会提供免费的现场技艺演示与实操体验课程。",
     statsReserveBtn: "免费预约研学考察/体验课程",
-    statsLocBtn: "获取社区地理导航坐标"
+    statsLocBtn: "获取社区地理导航坐标",
+
+    // Product Detail and Checkout Form Additions
+    valFineCraft: "喃内精品非遗工艺",
+    stockCount: "当前库存: {count} 件",
+    certGenuine: "100% 非遗传承工艺保真",
+    certDesc: "本件商品由喃内当地非遗传承人手工蜡染及织造而成。如有任何制作瑕疵，7 天内支持免费更换，全力保障您的权益。",
+    productSpecsTab: "文创工艺详情",
+    reviewsTab: "买家真实口碑评论 ({count})",
+    noReviewsYet: "该文创作品暂无买家评价，欢迎您认购并分享第一条心水评论！",
+    couponFormTitle: "输入社区专属礼金优惠券",
+    couponPlaceholder: "例如 NEWUSER, LUCKY50...",
+    couponVerifyBtn: "核验中...",
+    couponApplyBtn: "兑换",
+    shippingTitle: "收货地址与快递信息 (Shopee 联运速递)",
+    shippingNameLabel: "收货人真实姓名 *",
+    shippingNamePlaceholder: "例如 张三",
+    shippingPhoneLabel: "联系电话号码 *",
+    shippingPhonePlaceholder: "例如 081-234-5678",
+    shippingAddressLabel: "详细收货地址（门牌号、街道、市/县区、省份） *",
+    shippingAddressPlaceholder: "例如 99/9 Moo 2, Padang Besar, Sadao, Songkhla",
+    shippingZipLabel: "邮政编码 *",
+    shippingZipPlaceholder: "例如 90110",
+    shippingMethodLabel: "选择物流配送方式 *",
+    totalSupportLabel: "含运费认购总价",
+    itemPriceLabel: "商品价格",
+    shippingFeeLabel: "运费",
+    outOfStockBtn: "抢购一空",
+    buyNowBtn: "倾心认购",
+    loginFirstAlert: "在认购非遗工艺文创前，请先登录您的会员账户。",
+    exceededStockAlert: "购买数量已超出当前商品最大库存。",
+    completeShippingAlert: "⚠️ 提交认购订单前，请务必完整填写收货人地址、联系电话等必填项。",
+    benefitCharity: "善款将助力年度社区慈善公益及扶持中小微手工艺人。",
+    benefitEco: "采用绿色有机可降解材料包装，低碳环保减塑。",
+    benefitTrack: "可在“我的订单历史记录”中一键查询和追踪物流单号。"
   }
 };
+
+export const categoryTranslations = {
+  "cat-1": {
+    en: { name: "Best Sellers", description: "Premium game IDs and codes, instant stock delivery." },
+    zh: { name: "热销商品", description: "高端游戏账号及充值码，库存即时秒发。" }
+  },
+  "cat-2": {
+    en: { name: "Game Topup & Digital", description: "Game keys, top-up cards, and various digital services." },
+    zh: { name: "游戏充值与数码", description: "游戏CDKey、充值卡及各类数字服务。" }
+  },
+  "cat-3": {
+    en: { name: "Mystery Box (Gacha)", description: "Win premium rewards at low prices, exciting and fun!" },
+    zh: { name: "幸运盲盒 (Gacha)", description: "低价赢取高端豪华奖励，惊险刺激好玩！" }
+  }
+};
+
+export const productTranslations = {
+  "prod-1": {
+    en: {
+      name: "🔑 High-Rank Valorant ID with Premium Rare Knives",
+      description: "Diamond rank account with popular Champion 2022+2023 knife skins, premium weapon skins, instant delivery, 30-day warranty!",
+      details: "### Account Features\n- Current Rank: **Diamond 2**\n- Knife Skin: **Champions 2022 Butterfly Knife** or **Champions 2023 Vandal**\n- Popular Vandal skins: Prime, Reaver, RGX\n- Change password and email instantly after purchase\n- 30-day warranty against retrieval or arbitrary bans\n\n*Please record a video from transaction start to account login for claims.*"
+    },
+    zh: {
+      name: "🔑 高段位 Valorant 账号（含稀有高级近战武器）",
+      description: "Diamond（钻石）段位账号，含 2022+2023 年热门冠军近战皮肤及高级枪械皮肤，即时交付，30 天保障！",
+      details: "### 账号属性\n- 当前段位: **Diamond 2 (钻石 2)**\n- 近战皮肤: **Champions 2022 蝴蝶刀** 或 **Champions 2023 狂徒**\n- 包含热门狂徒皮肤: Prime, Reaver, RGX\n- 购买后可立即修改密码和绑定邮箱\n- 交付首月内防回、防回收，提供 30 天无理由售后保障\n\n*请录制从付款至登录成功的完整视频以维护您的售后权益。*"
+    }
+  },
+  "prod-2": {
+    en: {
+      name: "⭐️ Automated Shop Script (PHP PDO Bootstrap 5)",
+      description: "Premium admin dashboard, banner slider, auto-topup, Truemoney Red Packet, and QR slip verification with advanced admin control preset.",
+      details: "### Professional Features Included\n- Developed with **PHP OOP - PDO (MySQL/PostgreSQL)**\n- 100% custom admin dashboard (manage users, stock, daily/monthly stats)\n- Automatic top-up via QR scan and SlipOK / EasySlip API slip check\n- Latest Truemoney Red Packet gift code integration\n- One-click login via Discord OAuth\n- Dark/Light theme toggle stored in client cookies"
+    },
+    zh: {
+      name: "⭐️ 自动售货商城系统源码 (PHP PDO Bootstrap 5)",
+      description: "高级后台管理系统，轮播图管理，支持自动充值、口令红包以及 QR 二维码扫码支付，配备高级管理员控制面板。",
+      details: "### 极客级专业功能\n- 采用 **PHP OOP - PDO (MySQL/PostgreSQL)** 开发\n- 100% 自定义后台管理（管理用户、商品库存、日/月度财务账单）\n- 通过二维码和 SlipOK / EasySlip API 实现自动扫码和秒级入账\n- 整合最新 Truemoney 红包口令充值\n- 集成 Discord OAuth 实现一键快速注册和免密登录\n- 客户端 cookie 存储的主题切换（明亮/暗黑）"
+    }
+  },
+  "prod-3": {
+    en: {
+      name: "🎁 Discord Nitro (1 Month) Gift Link",
+      description: "1-month Discord Nitro gift link. Unlocks server boosts, custom animated stickers, and file uploads up to 500MB.",
+      details: "### Exclusive Benefits\n- **2 Free Server Boosts** included\n- Animated avatars and custom emojis anywhere\n- Animated profile pictures (GIF support)\n- High-quality screen sharing up to **4K 60FPS**\n- Expand server limit up to 200 servers\n\n*How to use: Login to Discord and click the gift link to activate.*"
+    },
+    zh: {
+      name: "🎁 Discord Nitro (1 个月) 礼物激活链接",
+      description: "1 个月 Discord Nitro 礼物链接。解锁服务器加速加成、自定义动态表情贴纸，以及高达 500MB 的文件上传上限。",
+      details: "### 特权尊享福利\n- 套餐内赠送 **2 个免费服务器 Boosts (加速)**\n- 随处使用动态头像、自定义全局表情及贴纸\n- 支持设置 GIF 格式动态背景和头像\n- 支持高达 **4K 60FPS** 的极清高清屏幕共享\n- 可加入服务器数量上限翻倍，最多可达 200 个\n\n*激活方式: 登录 Discord 并点击此礼物链接即可一键秒激活*"
+    }
+  },
+  "prod-4": {
+    en: {
+      name: "🎁 VIP Mystery Box - Epic Chance to Win Big Rewards!",
+      description: "Exciting chance to win game IDs and coupons! Stand a chance to win a legendary Valorant account or a free 100 THB topup!",
+      details: "### Reward Probability Details\n1. **Sweet Salt (1 THB Consolation Code)** - Drop Rate: 50%\n2. **10 THB Store Credit Key** - Drop Rate: 30%\n3. **Bronze-Gold Valorant Account** - Drop Rate: 15%\n4. **🎉 JACKPOT: Radiant Rank Valorant Account with Full Skins** - Drop Rate: 5%\n\n*Warning: The more you open, the closer you get to the Jackpot! Rates are processed transparently via random algorithms.*"
+    },
+    zh: {
+      name: "🎁 VIP 豪华盲盒 - 心跳暴击赢取神秘大奖！",
+      description: "超值盲盒抽奖！有机会获得稀游 Valorant 极品账号或 100 泰铢免费代金券，百元欧皇由你来当！",
+      details: "### 盲盒内设奖励及出率明细\n1. **甜咸阳光盐 (1 泰铢安慰金)** - 概率: 50%\n2. **10 泰铢充值信用激活码** - 概率: 30%\n3. **Bronze 至 Gold 段位 Valorant 账号** - 概率: 15%\n4. **🎉 终极 JACKPOT: Radiant 段位全皮肤绝版账号** - 概率: 5%\n\n*提示: 盲盒爆率由服务器随机数算法公平公开执行，多次尝试更容易触发 JackPot 暴击喔！*"
+    }
+  }
+};
+
+export const boxItemTranslations = {
+  "เกลือแสนหวาน (บัตรปลอบใจ 1 THB)": { en: "Sweet Salt (1 THB Consolation)", zh: "甜咸阳光盐 (1 泰铢安慰金)" },
+  "คีย์เครดิตร้าน 10 THB": { en: "10 THB Credit Key", zh: "10 泰铢充值激活码" },
+  "ไอดี Valorant ระดับ Bronze-Gold": { en: "Bronze-Gold Valorant Account", zh: "Bronze 至 Gold 段位 Valorant 账号" },
+  "🎉 JACKPOT: ไอดี Valorant Radiant / สกินครบ!": { en: "🎉 JACKPOT: Full Skins Radiant Valorant Account", zh: "🎉 终极 JACKPOT: 全皮肤 Radiant 绝版账号" }
+};
+
+export function getTranslatedCategory(cat: any, lang: Language) {
+  if (!cat) return cat;
+  if (lang === "th") return cat;
+  const trans = categoryTranslations[cat.id as keyof typeof categoryTranslations];
+  if (trans && trans[lang as keyof typeof trans]) {
+    return {
+      ...cat,
+      ...trans[lang as keyof typeof trans]
+    };
+  }
+  return cat;
+}
+
+export function getTranslatedProduct(prod: any, lang: Language) {
+  if (!prod) return prod;
+  if (lang === "th") return prod;
+  const trans = productTranslations[prod.id as keyof typeof productTranslations];
+  let updatedProd = { ...prod };
+  if (trans && trans[lang as keyof typeof trans]) {
+    updatedProd = {
+      ...updatedProd,
+      ...trans[lang as keyof typeof trans]
+    };
+  }
+  // Translate boxItems if any
+  if (updatedProd.boxItems && Array.isArray(updatedProd.boxItems)) {
+    updatedProd.boxItems = updatedProd.boxItems.map((item: any) => {
+      const itemTrans = boxItemTranslations[item.name as keyof typeof boxItemTranslations];
+      if (itemTrans && itemTrans[lang as keyof typeof itemTrans]) {
+        return {
+          ...item,
+          name: itemTrans[lang as keyof typeof itemTrans]
+        };
+      }
+      return item;
+    });
+  }
+  return updatedProd;
+}
 
 export function getTranslation(lang: Language, key: keyof typeof translations["th"]): string {
   const dict = translations[lang] || translations["th"];

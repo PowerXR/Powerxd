@@ -3,7 +3,7 @@ import { Category, Product, AppSettings } from "../types";
 import LucideIcon from "./LucideIcon";
 import { Search, Flame, Sparkles, Layers, ChevronRight, CornerDownRight, Landmark, Palette, User, Heart } from "lucide-react";
 import { motion } from "motion/react";
-import { Language, getTranslation } from "../lib/translations";
+import { Language, getTranslation, getTranslatedCategory, getTranslatedProduct } from "../lib/translations";
 
 interface CategoriesAndProductsProps {
   categories: Category[];
@@ -20,10 +20,13 @@ export default function CategoriesAndProducts({
   onSelectProduct,
   lang = "th"
 }: CategoriesAndProductsProps) {
+  const translatedCategories = categories.map(cat => getTranslatedCategory(cat, lang));
+  const translatedProducts = products.map(prod => getTranslatedProduct(prod, lang));
+
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = translatedProducts.filter((p) => {
     const matchesCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           p.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -133,8 +136,8 @@ export default function CategoriesAndProducts({
           </div>
         </button>
 
-        {categories.map((cat, idx) => {
-          const count = products.filter((p) => p.categoryId === cat.id).length;
+        {translatedCategories.map((cat, idx) => {
+          const count = translatedProducts.filter((p) => p.categoryId === cat.id).length;
           const isSelected = selectedCategory === cat.id;
           const hasBg = !!cat.imageUrl;
 
@@ -221,7 +224,7 @@ export default function CategoriesAndProducts({
                   
                   {/* Category overlay label */}
                   <span className="absolute top-3 left-3 px-3 py-1 text-[9px] uppercase tracking-wider font-extrabold rounded-full bg-[#12100E]/80 text-white border border-white/10 backdrop-blur-md">
-                    {categories.find((c) => c.id === prod.categoryId)?.name || getTranslation(lang, "communityCraft")}
+                    {translatedCategories.find((c) => c.id === prod.categoryId)?.name || getTranslation(lang, "communityCraft")}
                   </span>
                   
                   {/* Stock count label */}
