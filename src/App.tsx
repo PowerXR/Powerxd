@@ -46,6 +46,7 @@ export default function App() {
   const [sellerModalOpen, setSellerModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
+  const [floatAnnouncementClosed, setFloatAnnouncementClosed] = useState(false);
 
   // Real-time live purchase notifications state
   const [livePurchases, setLivePurchases] = useState<any[]>([]);
@@ -977,6 +978,88 @@ export default function App() {
                 </motion.div>
               </div>
             )}
+
+            {/* 7. Premium Floating Animated Announcement Widget */}
+            <AnimatePresence>
+              {settings && settings.announcementFloatActive && settings.announcementFloatText && !floatAnnouncementClosed && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8, y: 40, rotate: -1 }}
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1, 
+                    y: 0, 
+                    rotate: 0,
+                  }}
+                  exit={{ opacity: 0, scale: 0.8, y: 30, transition: { duration: 0.2 } }}
+                  transition={{ type: "spring", damping: 18, stiffness: 120 }}
+                  className={`fixed z-40 max-w-sm w-[calc(100vw-2rem)] p-4 rounded-3xl border shadow-2xl backdrop-blur-md flex gap-3.5 select-none ${
+                    settings.announcementFloatPosition === 'bottom-left' ? 'bottom-6 left-6' :
+                    settings.announcementFloatPosition === 'top-right' ? 'top-20 right-6' :
+                    settings.announcementFloatPosition === 'top-left' ? 'top-20 left-6' :
+                    'bottom-6 right-6' // default bottom-right
+                  } ${
+                    settings.announcementFloatStyle === 'pastel-orange' ? 'bg-[#FAF7F2]/95 dark:bg-[#1C1815]/95 border-orange-500/30 text-orange-950 dark:text-orange-100 shadow-orange-500/10' :
+                    settings.announcementFloatStyle === 'neon-cyan' ? 'bg-[#EDFDFD]/95 dark:bg-[#0E1A20]/95 border-cyan-400/30 text-cyan-950 dark:text-cyan-100 shadow-cyan-400/10' :
+                    settings.announcementFloatStyle === 'crimson-bold' ? 'bg-[#FFF5F5]/95 dark:bg-[#201010]/95 border-red-500/30 text-red-950 dark:text-red-100 shadow-red-500/10' :
+                    settings.announcementFloatStyle === 'emerald-green' ? 'bg-[#F2FDF5]/95 dark:bg-[#101F15]/95 border-emerald-500/30 text-emerald-950 dark:text-emerald-100 shadow-emerald-500/10' :
+                    'bg-[#FCFAF7]/95 dark:bg-[#1A1612]/95 border-amber-500/30 text-amber-950 dark:text-[#E2C7A9] shadow-[#8E6D4E]/10' // luxury-gold
+                  }`}
+                >
+                  {/* Floating effect parent */}
+                  <motion.div 
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="flex gap-3 w-full relative"
+                  >
+                    {/* Pulsing indicator light / glow effect */}
+                    <div className="absolute -top-1.5 -left-1.5 w-3 h-3 rounded-full animate-ping pointer-events-none opacity-75 bg-current" />
+                    <div className="absolute -top-1.5 -left-1.5 w-3 h-3 rounded-full pointer-events-none bg-current" />
+
+                    {/* Icon container */}
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg shadow-sm border flex-shrink-0 ${
+                      settings.announcementFloatStyle === 'pastel-orange' ? 'bg-orange-100 dark:bg-orange-500/20 border-orange-300/20' :
+                      settings.announcementFloatStyle === 'neon-cyan' ? 'bg-cyan-100 dark:bg-cyan-500/20 border-cyan-300/20' :
+                      settings.announcementFloatStyle === 'crimson-bold' ? 'bg-red-100 dark:bg-red-500/20 border-red-300/20' :
+                      settings.announcementFloatStyle === 'emerald-green' ? 'bg-emerald-100 dark:bg-emerald-500/20 border-emerald-300/20' :
+                      'bg-[#8E6D4E]/10 dark:bg-[#8E6D4E]/20 border-amber-500/20'
+                    }`}>
+                      {settings.announcementFloatIcon === 'welcome' ? '🎉' :
+                       settings.announcementFloatIcon === 'sale' ? '⚡' :
+                       settings.announcementFloatIcon === 'winner' ? '🏆' :
+                       settings.announcementFloatIcon === 'alert' ? '⚠️' : '📢'}
+                    </div>
+
+                    {/* Text container */}
+                    <div className="flex-grow min-w-0 pr-4 space-y-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-black tracking-widest uppercase opacity-75">
+                          {settings.announcementFloatIcon === 'welcome' ? (lang === 'th' ? 'ยินดีต้อนรับ' : 'Welcome') :
+                           settings.announcementFloatIcon === 'sale' ? (lang === 'th' ? 'โปรด่วนพิเศษ' : 'Flash Sale') :
+                           settings.announcementFloatIcon === 'winner' ? (lang === 'th' ? 'ข่าวดีจากทางร้าน' : 'Special Selection') :
+                           settings.announcementFloatIcon === 'alert' ? (lang === 'th' ? 'ประกาศสำคัญ' : 'Important Notice') : 
+                           (lang === 'th' ? 'กระบอกเสียงชุมชน' : 'Broadcast')}
+                        </span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      </div>
+                      <p className="text-[11px] leading-relaxed font-sans font-medium line-clamp-3">
+                        {settings.announcementFloatText}
+                      </p>
+                    </div>
+                  </motion.div>
+
+                  {/* Close button */}
+                  <button
+                    onClick={() => setFloatAnnouncementClosed(true)}
+                    className="absolute top-2.5 right-2.5 p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 opacity-60 hover:opacity-100 transition-opacity cursor-pointer text-current"
+                    title="ปิดหน้านี้"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Simulated SweetAlert2 Popups screen */}
             {swalAlert?.open && (

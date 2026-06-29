@@ -42,6 +42,11 @@ export interface AppSettings {
   announcementBarText?: string;
   announcementBarBgColor?: string;
   announcementBarTextColor?: string;
+  announcementFloatActive?: boolean;
+  announcementFloatText?: string;
+  announcementFloatStyle?: 'pastel-orange' | 'neon-cyan' | 'luxury-gold' | 'crimson-bold' | 'emerald-green';
+  announcementFloatIcon?: 'broadcast' | 'welcome' | 'sale' | 'winner' | 'alert';
+  announcementFloatPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   aboutUsTitle?: string;
   aboutUsBody?: string;
   aboutUsImageUrl?: string;

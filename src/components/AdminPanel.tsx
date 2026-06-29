@@ -2740,6 +2740,124 @@ export default function AdminPanel({
                   )}
                 </div>
 
+                {/* FLOATING ANIMATED ANNOUNCEMENT CONFIGURATION BLOCK */}
+                <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <div>
+                      <span className="text-[11px] font-bold text-amber-400 block uppercase tracking-wide">✨ ระบบข้อความประกาศแบบลอยอนิเมชั่นสวยงาม (Premium Floating Animated Announcement)</span>
+                      <span className="text-[9.5px] text-slate-400">สร้างป้ายแจ้งเตือนลอยเคลื่อนไหวได้ด้วยฟิสิกส์สปริงตระการตา มีธีมไอคอนพร้อมไฟกะพริบปรับแต่งได้หลังบ้าน</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={!!editedSettings.announcementFloatActive} 
+                        onChange={e => setEditedSettings({...editedSettings, announcementFloatActive: e.target.checked})}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                      <span className="ml-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-300">
+                        {editedSettings.announcementFloatActive ? "💡 เปิดใช้งาน" : "💤 ซ่อนการแสดงผล"}
+                      </span>
+                    </label>
+                  </div>
+
+                  {editedSettings.announcementFloatActive && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 text-xs">
+                      {/* Form Inputs */}
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block mb-1 text-[10px] text-slate-400 font-bold">ข้อความที่ต้องการประกาศ (Announcement Float Text) *</label>
+                          <textarea 
+                            rows={2}
+                            required={editedSettings.announcementFloatActive} 
+                            value={editedSettings.announcementFloatText || ""} 
+                            onChange={e => setEditedSettings({...editedSettings, announcementFloatText: e.target.value})} 
+                            className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs resize-none" 
+                            placeholder="ระบุคำประกาศ เช่น ✨ ข่าวดี! ทางตำบลน้ำน้อยได้เปิดทำเนียบช่างฝีมือปราชญ์ท้องถิ่นครบวงจรแล้ววันนี้..."
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400 font-bold">สไตล์ธีมสี (Theme Style)</label>
+                            <select
+                              value={editedSettings.announcementFloatStyle || "luxury-gold"}
+                              onChange={e => setEditedSettings({...editedSettings, announcementFloatStyle: e.target.value as any})}
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-[11px]"
+                            >
+                              <option value="luxury-gold">👑 ทองคำหรูหรา (Luxury Gold)</option>
+                              <option value="pastel-orange">🍊 ส้มพาสเทลอุ่น (Pastel Orange)</option>
+                              <option value="neon-cyan">💎 นีออนไซเบอร์ (Neon Cyan)</option>
+                              <option value="crimson-bold">🔥 แดงดุดันเร้าใจ (Crimson Bold)</option>
+                              <option value="emerald-green">🌿 เขียวมรกตออแกนิก (Emerald Green)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400 font-bold">สัญลักษณ์ไอคอน (Icon Type)</label>
+                            <select
+                              value={editedSettings.announcementFloatIcon || "broadcast"}
+                              onChange={e => setEditedSettings({...editedSettings, announcementFloatIcon: e.target.value as any})}
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-[11px]"
+                            >
+                              <option value="broadcast">📢 ประกาศ (Broadcast)</option>
+                              <option value="welcome">🎉 ยินดีต้อนรับ (Welcome)</option>
+                              <option value="sale">⚡ โปรด่วน/พิเศษ (Flash Sale)</option>
+                              <option value="winner">🏆 คัดสรร/ผู้ชนะ (Winner)</option>
+                              <option value="alert">⚠️ เตือนสำคัญ (Alert)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400 font-bold">ตำแหน่งแสดงผล (Position)</label>
+                            <select
+                              value={editedSettings.announcementFloatPosition || "bottom-right"}
+                              onChange={e => setEditedSettings({...editedSettings, announcementFloatPosition: e.target.value as any})}
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-[11px]"
+                            >
+                              <option value="bottom-right">↘️ มุมขวาด้านล่าง</option>
+                              <option value="bottom-left">↙️ มุมซ้ายด้านล่าง</option>
+                              <option value="top-right">↗️ มุมขวาด้านบน</option>
+                              <option value="top-left">↖️ มุมซ้ายด้านบน</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Floating Mini Live Preview */}
+                      <div className="bg-slate-900/40 p-3 rounded-xl border border-dashed border-white/10 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[9px] font-bold text-teal-400 block mb-2 uppercase tracking-wide">🔍 จำลองป้ายประกาศลอยจริง (Animated Floating Preview)</span>
+                          
+                          <div className="py-2 flex justify-center items-center h-24 bg-slate-950/60 rounded-lg relative overflow-hidden">
+                            {/* Animated sample floating card inside admin */}
+                            <div className="flex items-center gap-2.5 p-3 rounded-2xl border max-w-xs shadow-lg animate-bounce duration-1000 bg-[#FCFAF7] dark:bg-[#1A1612] border-amber-500/30 text-amber-700 dark:text-[#E2C7A9] shadow-amber-500/5">
+                              <span className="text-base flex-shrink-0 animate-pulse">
+                                {editedSettings.announcementFloatIcon === 'welcome' ? '🎉' :
+                                 editedSettings.announcementFloatIcon === 'sale' ? '⚡' :
+                                 editedSettings.announcementFloatIcon === 'winner' ? '🏆' :
+                                 editedSettings.announcementFloatIcon === 'alert' ? '⚠️' : '📢'}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-[9px] font-black tracking-widest uppercase opacity-75">
+                                  {editedSettings.announcementFloatIcon === 'welcome' ? 'Welcome' :
+                                   editedSettings.announcementFloatIcon === 'sale' ? 'Flash Deal' :
+                                   editedSettings.announcementFloatIcon === 'winner' ? 'Special Selection' :
+                                   editedSettings.announcementFloatIcon === 'alert' ? 'Important Notice' : 'Broadcast'}
+                                </div>
+                                <div className="text-[10px] font-medium leading-tight truncate">
+                                  {editedSettings.announcementFloatText || "ข้อความจำลองประกาศของคุณหลังบ้าน..."}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[9.5px] text-stone-500 block text-right">ป้ายนี้จะแสดงในหน้าแรก ลอยอย่างสวยงามและเป็นธรรมชาติ</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-end gap-2">
                   <button type="submit" className="bg-gradient-to-r from-teal-500 to-emerald-400 text-slate-950 font-bold py-2.5 px-6 rounded-xl hover:scale-102 transition-all">บันทึกการตั้งค่าทั้งสิ้น</button>
                 </div>
