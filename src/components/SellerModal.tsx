@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { User, AppSettings, Category, Product } from "../types";
 import LucideIcon from "./LucideIcon";
 import { 
-  X, Store, FileText, CheckCircle2, ShieldAlert, Award, RefreshCw, 
+  X, Store, FileText, CheckCircle2, ShieldAlert, Award, RefreshCw, Eye,
   Coins, Plus, Edit, Trash, Truck, Image, HelpCircle, Gift, UserCheck, ChevronRight,
   Settings
 } from "lucide-react";
@@ -903,11 +903,12 @@ export default function SellerModal({
                                 <th className="p-2">วันที่ยื่นเรื่อง</th>
                                 <th className="p-2">สถานะ</th>
                                 <th className="p-2">หมายเหตุแอดมิน</th>
+                                <th className="p-2 text-center">สลิปการโอน</th>
                               </tr>
                             </thead>
                             <tbody>
                               {withdrawals.map((w: any) => (
-                                <tr key={w.id} className="border-b border-white/[0.03]">
+                                <tr key={w.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors">
                                   <td className="p-2 font-bold text-white">฿{w.amount.toLocaleString()}</td>
                                   <td className="p-2 text-stone-400">{new Date(w.submittedAt).toLocaleDateString('th-TH')}</td>
                                   <td className="p-2">
@@ -920,8 +921,23 @@ export default function SellerModal({
                                        w.status === 'approved' ? 'จ่ายแล้ว' : 'ปฏิเสธ'}
                                     </span>
                                   </td>
-                                  <td className="p-2 text-stone-500 font-light max-w-[150px] truncate" title={w.adminNotes}>
+                                  <td className="p-2 text-stone-500 font-light max-w-[120px] truncate" title={w.adminNotes}>
                                     {w.adminNotes || "-"}
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    {w.slipUrl ? (
+                                      <a 
+                                        href={w.slipUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[9.5px] font-bold text-teal-400 hover:text-teal-300 hover:underline bg-teal-500/10 hover:bg-teal-500/20 px-1.5 py-0.5 rounded transition-all cursor-pointer"
+                                      >
+                                        <Eye size={10} />
+                                        <span>ดูสลิป</span>
+                                      </a>
+                                    ) : (
+                                      <span className="text-stone-600">-</span>
+                                    )}
                                   </td>
                                 </tr>
                               ))}

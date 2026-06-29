@@ -3,7 +3,7 @@ import { AppSettings, Category, Product, User, Coupon, Transaction, Review, Land
 import LucideIcon from "./LucideIcon";
 import { 
   X, LayoutDashboard, Database, FolderHeart, Settings, Ticket, Code, Plus, Edit, Trash, Users, Percent, Gift, FileText, Check, Copy, HelpCircle, Eye, RefreshCw, Truck, Info, Palette, Award,
-  Map as MapIcon, Compass, Trees, Building, Sparkles
+  Map as MapIcon, Compass, Trees, Building, Sparkles, Upload
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -204,6 +204,8 @@ export default function AdminPanel({
   const [editingVrfId, setEditingVrfId] = useState<string | null>(null);
   const [adminWithdrawals, setAdminWithdrawals] = useState<any[]>([]);
   const [withdrawalsLoading, setWithdrawalsLoading] = useState(false);
+  const [withdrawalSlips, setWithdrawalSlips] = useState<Record<string, string>>({}); // withdrawal.id -> slipUrl
+  const [uploadingSlipId, setUploadingSlipId] = useState<string | null>(null);
 
   const fetchVerifications = async () => {
     setVerificationsLoading(true);
@@ -264,7 +266,7 @@ export default function AdminPanel({
     }
   };
 
-  const handleReviewWithdrawal = async (id: string, status: "approved" | "rejected", adminNotes: string) => {
+  const handleReviewWithdrawal = async (id: string, status: "approved" | "rejected", adminNotes: string, slipUrl?: string) => {
     try {
       const res = await fetch(`/api/admin/withdrawals/${id}/review`, {
         method: "POST",
@@ -273,10 +275,10 @@ export default function AdminPanel({
           "x-user-role": user?.role || "admin",
           "x-user-id": user?.id || ""
         },
-        body: JSON.stringify({ status, adminNotes })
+        body: JSON.stringify({ status, adminNotes, slipUrl })
       });
       if (res.ok) {
-        showCustomAlert("ดำเนินการสำเร็จ", `อัปเดตรายการคำขอถอนเงินเป็น ${status === 'approved' ? 'อนุมัติแล้ว' : 'ปฏิเสธคำขอและคืนเครดิต'} เรียบร้อย`, "success");
+        showCustomAlert("ดำเนินการสำเร็จ", `อัปเดตรายการคำขอถอนเงินเป็น ${status === 'approved' ? 'อนุมัติการโอนแล้ว' : 'ปฏิเสธคำขอเรียบร้อย'}`, "success");
         fetchAdminWithdrawals();
         onRefreshData();
       } else {
@@ -3301,7 +3303,21 @@ CREATE TABLE IF NOT EXISTS users (
                       <tbody>
                         {adminWithdrawals.map((w: any) => (
                           <tr key={w.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                            <td className="p-3 font-mono text-[10px] text-slate-400">{w.id}</td>
+                            <td className="p-3 font-mono text-[10px] text-slate-400">
+                              {w.id}
+                              {w.slipUrl && (
+                                <div className="mt-1">
+                                  <a 
+                                    href={w.slipUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="inline-block px-1.5 py-0.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-[9px] text-emerald-400 rounded border border-emerald-500/15"
+                                  >
+                                    เปิดดูสลิป
+                                  </a>
+                                </div>
+                              )}
+                            </td>
                             <td className="p-3">
                               <span className="font-bold text-slate-200">{w.username}</span>
                               <div className="text-[9px] text-slate-500">ID: {w.userId}</div>
@@ -3329,40 +3345,130 @@ CREATE TABLE IF NOT EXISTS users (
                             </td>
                             <td className="p-3">
                               {w.status === "pending" ? (
-                                <div className="space-y-2 min-w-[200px]">
+                                <div className="space-y-2.5 min-w-[200px]">
                                   <input 
                                     type="text"
                                     id={`wnote-${w.id}`}
-                                    placeholder="ใส่หมายเลขอ้างอิงสลิปโอนเงิน..."
+                                    placeholder="ระบุหมายเลขอ้างอิง หรือบันทึกข้อความ..."
                                     className="w-full bg-slate-900 border border-white/10 rounded-lg p-1.5 text-white text-[11px]"
                                   />
+
+                                  {/* Upload Transfer Slip for the Seller */}
+                                  <div className="space-y-1 bg-white/[0.02] p-2 rounded-lg border border-white/5">
+                                    <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">แนบสลิปการโอนเงินสด:</label>
+                                    <div className="flex items-center gap-2">
+                                      <label className="cursor-pointer p-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/5 rounded-lg text-[10px] font-bold flex items-center gap-1">
+                                        <Upload size={12} />
+                                        {uploadingSlipId === w.id ? "กำลังอัปโหลด..." : withdrawalSlips[w.id] ? "เปลี่ยนรูปสลิป" : "อัปโหลดรูปภาพสลิป"}
+                                        <input 
+                                          type="file" 
+                                          accept="image/*" 
+                                          className="hidden" 
+                                          disabled={uploadingSlipId === w.id}
+                                          onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            if (!file.type.startsWith("image/")) {
+                                              showCustomAlert("ผิดพลาด", "กรุณาเลือกไฟล์รูปภาพเท่านั้นค่ะ", "error");
+                                              return;
+                                            }
+                                            setUploadingSlipId(w.id);
+                                            const reader = new FileReader();
+                                            reader.onloadend = async () => {
+                                              const base64Data = reader.result as string;
+                                              try {
+                                                const res = await fetch("/api/upload", {
+                                                  method: "POST",
+                                                  headers: { "Content-Type": "application/json" },
+                                                  body: JSON.stringify({ filename: file.name, base64Data })
+                                                });
+                                                if (res.ok) {
+                                                  const data = await res.json();
+                                                  setWithdrawalSlips(prev => ({ ...prev, [w.id]: data.url }));
+                                                  showCustomAlert("สำเร็จ", "อัปโหลดไฟล์สลิปการโอนสำเร็จเรียบร้อยแล้วค่ะ", "success");
+                                                } else {
+                                                  showCustomAlert("ผิดพลาด", "อัปโหลดไฟล์ไม่สำเร็จ", "error");
+                                                }
+                                              } catch (err) {
+                                                console.error(err);
+                                                showCustomAlert("ผิดพลาด", "เกิดข้อผิดพลาดในการเชื่อมต่อเพื่ออัปโหลด", "error");
+                                              } finally {
+                                                setUploadingSlipId(null);
+                                              }
+                                            };
+                                            reader.readAsDataURL(file);
+                                          }}
+                                        />
+                                      </label>
+                                      {withdrawalSlips[w.id] && (
+                                        <span className="text-[10px] text-emerald-400 font-bold">✓ แนบสลิปแล้ว</span>
+                                      )}
+                                    </div>
+                                    {withdrawalSlips[w.id] && (
+                                      <div className="relative w-16 h-16 border border-white/10 rounded-lg overflow-hidden mt-1.5 bg-black">
+                                        <img src={withdrawalSlips[w.id]} alt="slip preview" className="w-full h-full object-cover" />
+                                        <button 
+                                          type="button"
+                                          onClick={() => setWithdrawalSlips(prev => {
+                                            const copy = { ...prev };
+                                            delete copy[w.id];
+                                            return copy;
+                                          })}
+                                          className="absolute top-0.5 right-0.5 bg-red-600 hover:bg-red-500 text-white rounded-full p-0.5"
+                                        >
+                                          <X size={8} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
                                   <div className="flex gap-1.5">
                                     <button
                                       type="button"
+                                      disabled={uploadingSlipId === w.id}
                                       onClick={() => {
                                         const noteVal = (document.getElementById(`wnote-${w.id}`) as HTMLInputElement)?.value || "";
-                                        handleReviewWithdrawal(w.id, "approved", noteVal);
+                                        const slipUrl = withdrawalSlips[w.id];
+                                        if (!slipUrl) {
+                                          showCustomAlert("แจ้งเตือน", "กรุณาแนบไฟล์รูปสลิปการโอนเงินเพื่ออ้างอิงยืนยันให้ผู้ขายได้รับทราบก่อนค่ะ", "error");
+                                          return;
+                                        }
+                                        handleReviewWithdrawal(w.id, "approved", noteVal, slipUrl);
                                       }}
-                                      className="flex-1 py-1 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[10px] text-center"
+                                      className="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold rounded-lg text-[10px] text-center cursor-pointer"
                                     >
                                       อนุมัติจ่ายแล้ว
                                     </button>
                                     <button
                                       type="button"
+                                      disabled={uploadingSlipId === w.id}
                                       onClick={() => {
                                         const noteVal = (document.getElementById(`wnote-${w.id}`) as HTMLInputElement)?.value || "";
                                         handleReviewWithdrawal(w.id, "rejected", noteVal);
                                       }}
-                                      className="py-1 px-2 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-lg text-[10px]"
+                                      className="py-1.5 px-2 bg-red-600/80 hover:bg-red-500 disabled:opacity-40 text-white font-bold rounded-lg text-[10px] cursor-pointer"
                                     >
-                                      คืนเครดิต
+                                      ปฏิเสธ
                                     </button>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="text-[10px] space-y-0.5 text-slate-400">
+                                <div className="text-[10px] space-y-1 text-slate-400 bg-white/[0.01] p-2 rounded-lg border border-white/[0.03]">
                                   <div>โดยแอดมิน: {new Date(w.reviewedAt).toLocaleDateString('th-TH')}</div>
-                                  <div>สลิป/บันทึก: <span className="text-amber-400">{w.adminNotes || "ไม่มีหมายเหตุ"}</span></div>
+                                  <div>หมายเหตุ: <span className="text-amber-400">{w.adminNotes || "ไม่มีหมายเหตุ"}</span></div>
+                                  {w.slipUrl && (
+                                    <div className="pt-1.5">
+                                      <a 
+                                        href={w.slipUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="inline-flex items-center gap-1.5 p-1 px-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-[9.5px] text-emerald-400 rounded-lg font-bold border border-emerald-500/20 transition-all"
+                                      >
+                                        <Eye size={11} />
+                                        <span>เปิดดูภาพสลิปโอนเงิน</span>
+                                      </a>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </td>

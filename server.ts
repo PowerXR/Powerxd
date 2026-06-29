@@ -20,9 +20,9 @@ function loadDB() {
       contactDiscord: "https://discord.gg/yourinvite",
       contactLine: "https://line.me/ti/p/@yourline",
       truewalletPhone: "099-123-4567",
-      bankAccountNumber: "9770964014",
+      bankAccountNumber: "1051915832",
       bankAccountName: "ธนกฤต ชูกำเนิด Thanakrit Chokumnerd",
-      bankName: "ธนาคารกรุงเทพ",
+      bankName: "ธนาคารกสิกรไทย",
       qrSlipToken: "DEMO-SLIPOK-TOKEN-12345",
       botCfTurnstileKey: "0x4AAAAAAAx_demo_turnstile_key",
       discordClientId: "1122334455667788",
@@ -1533,7 +1533,13 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
     const user = db.users.find((u: any) => u.id === userId);
     if (!user) return res.status(404).json({ error: "ไม่พบผู้ใช้" });
 
-    const { amount, bankName, bankAccountNumber, bankAccountName } = req.body;
+    // Try to auto-populate bank details from verified seller registration if not passed
+    const verification = db.sellerVerifications.find((v: any) => v.userId === userId && v.status === "approved") || db.sellerVerifications.find((v: any) => v.userId === userId);
+    
+    const amount = req.body.amount;
+    const bankName = req.body.bankName || (verification ? verification.bankName : "");
+    const bankAccountNumber = req.body.bankAccountNumber || (verification ? verification.bankAccountNumber : "");
+    const bankAccountName = req.body.bankAccountName || (verification ? verification.bankAccountName : "");
     const amt = Number(amount);
 
     if (!amt || amt <= 0) {
@@ -1545,12 +1551,17 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
     }
 
     const currentWithdrawable = user.withdrawableBalance || 0;
-    if (currentWithdrawable < amt) {
-      return res.status(400).json({ error: "ยอดเงินที่สามารถถอนได้ของคุณไม่เพียงพอ" });
+    
+    // Calculate sum of existing pending withdrawals to avoid double-requesting beyond withdrawable balance
+    const pendingTotal = db.withdrawals
+      .filter((w: any) => w.userId === userId && w.status === "pending")
+      .reduce((sum: number, w: any) => sum + w.amount, 0);
+
+    if (currentWithdrawable - pendingTotal < amt) {
+      return res.status(400).json({ error: "ยอดเงินที่สามารถถอนได้ของคุณไม่เพียงพอ (หักรายการที่รอการตรวจสอบอยู่)" });
     }
 
-    // Deduct immediately upon request
-    user.withdrawableBalance = parseFloat((currentWithdrawable - amt).toFixed(2));
+    // Do NOT deduct withdrawableBalance immediately anymore. It is deducted upon admin's approval.
 
     const newRequest = {
       id: "wdr-" + Date.now(),
@@ -1567,7 +1578,7 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
     db.withdrawals.unshift(newRequest);
     saveDB(db);
 
-    res.json({ success: true, message: "คำส่งคำขอถอนเงินสำเร็จ ยอดถอนจะหักล่วงหน้าและส่งแอดมินดำเนินการตรวจสอบ", request: newRequest });
+    res.json({ success: true, message: "ส่งคำขอถอนเงินสำเร็จ รอแอดมินดำเนินการตรวจสอบ โอนเงิน และแนบหลักฐานสลิปการโอน", request: newRequest });
   });
 
   // GET admin verifications
@@ -1614,7 +1625,7 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
     const role = req.headers["x-user-role"] as string;
     if (role !== "admin") return res.status(403).json({ error: "Unauthorized" });
 
-    const { status, adminNotes } = req.body; // 'approved' | 'rejected'
+    const { status, adminNotes, slipUrl } = req.body; // 'approved' | 'rejected'
     const reqIndex = db.withdrawals.findIndex((w: any) => w.id === req.params.id);
     if (reqIndex === -1) return res.status(404).json({ error: "ไม่พบรายการคำขอถอนเงินนี้" });
 
@@ -1625,15 +1636,23 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
 
     withdrawal.status = status;
     withdrawal.adminNotes = adminNotes || "";
+    if (slipUrl) {
+      withdrawal.slipUrl = slipUrl;
+    }
     withdrawal.reviewedAt = new Date().toISOString();
 
-    if (status === "rejected") {
-      // Refund the seller's withdrawableBalance
+    if (status === "approved") {
+      // 1. Deduct immediately from seller's withdrawableBalance
       const seller = db.users.find((u: any) => u.id === withdrawal.userId);
       if (seller) {
         if (seller.withdrawableBalance === undefined) seller.withdrawableBalance = 0;
-        seller.withdrawableBalance = parseFloat((seller.withdrawableBalance + withdrawal.amount).toFixed(2));
+        seller.withdrawableBalance = Math.max(0, parseFloat((seller.withdrawableBalance - withdrawal.amount).toFixed(2)));
+
+        // 2. Reset Pending Escrow (pendingBalance) to 0
+        seller.pendingBalance = 0;
       }
+    } else if (status === "rejected") {
+      // No refund logic needed now since we don't deduct on request anymore!
     }
 
     saveDB(db);
