@@ -972,10 +972,10 @@ export default function AdminPanel({
         <div className="flex flex-col md:grid md:grid-cols-12 gap-5 pt-4 flex-1 min-h-0 overflow-hidden">
           
           {/* LEFT Sidebar controls */}
-          <div className="flex-shrink-0 md:col-span-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 border-b md:border-b-0 md:border-r border-white/5 pr-0 md:pr-4">
+          <div className="flex-shrink-0 md:col-span-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2.5 md:pb-0 border-b md:border-b-0 md:border-r border-white/5 pr-0 md:pr-4 scrollbar-thin">
             <button
               onClick={() => setActiveTab("dashboard")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "dashboard" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -984,7 +984,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("products")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "products" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -993,7 +993,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("categories")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "categories" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1002,7 +1002,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("coupons")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "coupons" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1011,7 +1011,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("users")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "users" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1020,7 +1020,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("orders")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "orders" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1029,7 +1029,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("about-us")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "about-us" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1038,7 +1038,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("portfolios")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "portfolios" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1047,7 +1047,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("artisans")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "artisans" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1056,7 +1056,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("landmarks")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "landmarks" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1065,7 +1065,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("seller-verifications")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "seller-verifications" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1074,7 +1074,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("admin-withdrawals")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "admin-withdrawals" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1083,7 +1083,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("settings")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                 activeTab === "settings" ? `${themeAccentBg} border-r-2 ${themeAccentBorder}` : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -1092,7 +1092,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setActiveTab("php-exporter")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all text-left whitespace-nowrap cursor-pointer bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-500/20 text-teal-400 hover:from-teal-500/20 hover:to-emerald-500/20 ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all text-left whitespace-nowrap cursor-pointer bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-500/20 text-teal-400 hover:from-teal-500/20 hover:to-emerald-500/20 ${
                 activeTab === "php-exporter" ? "ring-1 ring-teal-400" : ""
               }`}
               title="ส่งออกไฟล์ PHP (PDO) เพื่อดาวน์โหลดนำไปเปิดใช้งานร้านจริงได้ทันที"

@@ -759,10 +759,10 @@ export default function SellerModal({
           <div className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-5 pt-4 min-h-0 overflow-hidden">
             
             {/* SUB-TABS SELECTOR */}
-            <div className="flex-shrink-0 md:col-span-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 border-b md:border-b-0 md:border-r border-white/5 pr-0 md:pr-4 h-fit md:h-full">
+            <div className="flex-shrink-0 md:col-span-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2.5 md:pb-0 border-b md:border-b-0 md:border-r border-white/5 pr-0 md:pr-4 h-fit md:h-full scrollbar-thin">
               <button
                 onClick={() => setActiveTab("balance")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+                className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                   activeTab === "balance" ? "bg-teal-500/10 text-teal-400 border-r-2 border-teal-500" : "text-stone-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
@@ -772,7 +772,7 @@ export default function SellerModal({
 
               <button
                 onClick={() => setActiveTab("products")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+                className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                   activeTab === "products" ? "bg-teal-500/10 text-teal-400 border-r-2 border-teal-500" : "text-stone-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
@@ -782,14 +782,14 @@ export default function SellerModal({
 
               <button
                 onClick={() => setActiveTab("orders")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+                className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                   activeTab === "orders" ? "bg-teal-500/10 text-teal-400 border-r-2 border-teal-500" : "text-stone-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <Truck size={14} />
                 <span className="flex-1">ออเดอร์ของฉัน</span>
                 {sellerOrders.filter(o => o.orderStatus === 'preparing').length > 0 && (
-                  <span className="bg-red-500 text-white font-black px-1.5 py-0.5 rounded-full text-[9px]">
+                  <span className="bg-red-500 text-white font-black px-1.5 py-0.5 rounded-full text-[9px] flex-shrink-0">
                     {sellerOrders.filter(o => o.orderStatus === 'preparing').length}
                   </span>
                 )}
@@ -797,7 +797,7 @@ export default function SellerModal({
 
               <button
                 onClick={() => setActiveTab("settings")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
+                className={`flex-shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold rounded-xl transition-all text-left whitespace-nowrap cursor-pointer ${
                   activeTab === "settings" ? "bg-teal-500/10 text-teal-400 border-r-2 border-teal-500" : "text-stone-400 hover:bg-white/5 hover:text-white"
                 }`}
               >

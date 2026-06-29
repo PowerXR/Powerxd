@@ -261,6 +261,9 @@ export default function Header({
             className="md:hidden border-t border-[#8E6D4E]/10 bg-[#FAF7F2] dark:bg-[#141210] px-4 py-3 space-y-3 font-medium text-[#735A45] dark:text-[#C5B49E] text-sm"
           >
             <a href="#homepage" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "home")}</a>
+            <a href="#about-us-section" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "aboutUs")}</a>
+            <a href="#portfolios-section" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "portfolios")}</a>
+            <a href="#artisans-section" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "artisans")}</a>
             <a href="#recommended-products" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "products")}</a>
             <button 
               onClick={() => { setMobileMenuOpen(false); onOpenTopup(); }} 
