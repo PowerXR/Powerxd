@@ -1075,6 +1075,43 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
     res.json({ message: "Coupon deleted successfully" });
   });
 
+  // GET recent public purchases (Real-time live feed across the entire website)
+  app.get("/api/purchases/recent", (req, res) => {
+    if (!db.transactions) db.transactions = [];
+    const purchases = db.transactions
+      .filter((tx: any) => tx.type === "purchase_product" || tx.type === "purchase_box")
+      .slice(0, 15)
+      .map((tx: any) => {
+        // Mask username: e.g. "wichit" -> "wi***t", "bob" -> "b*b", "admin" -> "ad***"
+        let maskedUser = "ผู้ใช้ทั่วไป";
+        if (tx.username) {
+          const u = tx.username;
+          if (u.length <= 2) {
+            maskedUser = u[0] + "*";
+          } else {
+            maskedUser = u[0] + u[1] + "*".repeat(Math.max(1, u.length - 3)) + u[u.length - 1];
+          }
+        }
+
+        // Extract product name from details: [Product Name]
+        let productName = "สินค้าในร้าน";
+        const match = tx.details.match(/\[(.*?)\]/);
+        if (match && match[1]) {
+          productName = match[1];
+        }
+
+        return {
+          id: tx.id,
+          username: maskedUser,
+          productName,
+          amount: tx.amount,
+          type: tx.type,
+          date: tx.date
+        };
+      });
+    res.json(purchases);
+  });
+
   // Get Transactions (User specific, or Admin view all)
   app.get("/api/transactions", (req, res) => {
     const userId = req.headers["x-user-id"] as string;

@@ -15,7 +15,8 @@ import NamNoiMap from "./components/NamNoiMap";
 
 // Icons
 import { 
-  Check, AlertCircle, AlertTriangle, ShieldCheck, Mail, Send, Disc, ExternalLink, Heart, ArrowUpRight, Copy, Code, LayoutDashboard
+  Check, AlertCircle, AlertTriangle, ShieldCheck, Mail, Send, Disc, ExternalLink, Heart, ArrowUpRight, Copy, Code, LayoutDashboard,
+  Activity, ShoppingBag, Bell, Volume2, VolumeX
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -55,6 +56,65 @@ export default function App() {
       }
     }
   }, [settings]);
+
+  // Real-time entire website purchases feed
+  const [recentPurchases, setRecentPurchases] = useState<any[]>([]);
+  const [showLiveFeed, setShowLiveFeed] = useState(false);
+  const [liveToast, setLiveToast] = useState<{ id: string; username: string; productName: string; amount: number; type: string } | null>(null);
+  const [lastSeenId, setLastSeenId] = useState<string | null>(null);
+  const [liveSoundEnabled, setLiveSoundEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("liveSoundEnabled") !== "false";
+  });
+
+  const fetchRecentPurchases = async () => {
+    const data = await safeFetch("/api/purchases/recent");
+    if (data && Array.isArray(data)) {
+      setRecentPurchases(data);
+      if (data.length > 0) {
+        const latest = data[0];
+        // If we have a new purchase we haven't seen yet, trigger a toast notification!
+        if (lastSeenId && latest.id !== lastSeenId) {
+          setLiveToast(latest);
+          
+          // Optional subtle pop sound effect if enabled
+          if (liveSoundEnabled) {
+            try {
+              const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+              const oscillator = audioCtx.createOscillator();
+              const gainNode = audioCtx.createGain();
+              oscillator.connect(gainNode);
+              gainNode.connect(audioCtx.destination);
+              oscillator.type = 'sine';
+              oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5 note
+              gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+              oscillator.start();
+              oscillator.stop(audioCtx.currentTime + 0.15);
+            } catch (e) {
+              console.warn("Audio Context blocked or failed:", e);
+            }
+          }
+
+          // Auto hide after 5 seconds
+          setTimeout(() => {
+            setLiveToast(null);
+          }, 5000);
+        }
+        setLastSeenId(latest.id);
+      }
+    }
+  };
+
+  useEffect(() => {
+    localStorage.setItem("liveSoundEnabled", String(liveSoundEnabled));
+  }, [liveSoundEnabled]);
+
+  useEffect(() => {
+    fetchRecentPurchases();
+    // Poll every 8 seconds for a highly responsive real-time experience
+    const interval = setInterval(fetchRecentPurchases, 8000);
+    return () => clearInterval(interval);
+  }, [lastSeenId, liveSoundEnabled]);
 
   // Simulated SweetAlert2 Popups
   const [swalAlert, setSwalAlert] = useState<{
@@ -975,6 +1035,251 @@ export default function App() {
                 </motion.div>
               </div>
             )}
+
+            {/* Real-time Live Purchase Activity Feed Floating Toggle Button */}
+            <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowLiveFeed(!showLiveFeed)}
+                className="p-3.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xl flex items-center justify-center relative cursor-pointer border border-emerald-500/20 group"
+                title={lang === "th" ? "ดูการซื้อขายสดแบบเรียลไทม์" : "View Live Purchases"}
+              >
+                {/* Breathing green live status dot */}
+                <span className="absolute top-1 right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-[#16161A]">
+                  <span className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-75" />
+                </span>
+                <Activity size={22} className="animate-pulse" />
+                
+                {/* Micro tooltip */}
+                <span className="absolute right-14 bg-stone-900 text-stone-200 text-[10px] font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md pointer-events-none border border-white/5">
+                  {lang === "th" ? "🛍️ ประวัติการซื้อเรียลไทม์" : "🛍️ Live Purchase History"}
+                </span>
+              </motion.button>
+            </div>
+
+            {/* Live Purchase Toast Notification popup */}
+            <AnimatePresence>
+              {liveToast && (
+                <motion.div
+                  initial={{ opacity: 0, x: -100, y: 50, scale: 0.9 }}
+                  animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -50, scale: 0.95, transition: { duration: 0.2 } }}
+                  className="fixed bottom-6 left-6 z-50 max-w-sm w-full bg-stone-950/95 dark:bg-stone-900/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border-2 border-emerald-500/30 flex items-center gap-3.5"
+                >
+                  {/* Glowing Pulse status */}
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/30 relative">
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full">
+                      <span className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-75" />
+                    </span>
+                    <ShoppingBag size={18} className="animate-bounce" />
+                  </div>
+                  
+                  {/* Text details */}
+                  <div className="flex-1 min-w-0 text-left font-sans">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400">
+                        {lang === "th" ? "ซื้อสินค้าสำเร็จ!" : "PURCHASED!"}
+                      </span>
+                      <span className="text-[9px] text-stone-500 font-mono">เมื่อสักครู่</span>
+                    </div>
+                    <p className="text-xs font-semibold text-white truncate mt-0.5">
+                      คุณ <span className="text-emerald-300 font-bold">{liveToast.username}</span>
+                    </p>
+                    <p className="text-[11px] text-stone-300 truncate font-light">
+                      {lang === "th" ? "ได้สั่งซื้อ" : "bought"} <span className="text-amber-300 font-normal">[{liveToast.productName}]</span>
+                    </p>
+                  </div>
+
+                  {/* Price bubble */}
+                  <div className="flex-shrink-0 text-right">
+                    <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 px-2 py-1 rounded-lg">
+                      ฿{liveToast.amount.toLocaleString()}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Real-time Purchases Activity Sidebar Drawer */}
+            <AnimatePresence>
+              {showLiveFeed && (
+                <>
+                  {/* Backdrop */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowLiveFeed(false)}
+                    className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs"
+                  />
+
+                  {/* Sidebar Panel Container */}
+                  <motion.div
+                    initial={{ x: "100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "100%" }}
+                    transition={{ type: "spring", damping: 26, stiffness: 220 }}
+                    className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-md bg-stone-950/95 text-stone-100 border-l border-white/10 shadow-2xl flex flex-col font-sans"
+                  >
+                    {/* Header bar */}
+                    <div className="p-6 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1 rounded bg-emerald-500/15 text-emerald-400">
+                            <Activity size={16} />
+                          </div>
+                          <h3 className="text-base font-bold text-white">
+                            {lang === "th" ? "ประวัติการซื้อสด (เรียลไทม์)" : lang === "zh" ? "实时购买历史" : "Live Purchase Stream"}
+                          </h3>
+                        </div>
+                        <p className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" />
+                          <span>{lang === "th" ? "กำลังเชื่อมต่อข้อมูลล่าสุดดึงจากเซิร์ฟเวอร์..." : "Streaming real-time orders..."}</span>
+                        </p>
+                      </div>
+
+                      {/* Close + Sound toggle buttons */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setLiveSoundEnabled(!liveSoundEnabled)}
+                          className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                            liveSoundEnabled 
+                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                              : "bg-stone-900 border-white/5 text-stone-500"
+                          }`}
+                          title={lang === "th" ? (liveSoundEnabled ? "ปิดเสียงแจ้งเตือน" : "เปิดเสียงแจ้งเตือน") : "Toggle sound"}
+                        >
+                          {liveSoundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+                        </button>
+
+                        <button
+                          onClick={() => setShowLiveFeed(false)}
+                          className="p-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-400 hover:text-white border border-white/5 cursor-pointer"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stats summary / connection info */}
+                    <div className="px-6 py-4 bg-white/[0.01] border-b border-white/5 grid grid-cols-2 gap-3 text-center">
+                      <div className="p-2.5 rounded-xl bg-stone-900 border border-white/5">
+                        <span className="block text-[10px] text-stone-400 font-bold uppercase tracking-wider">
+                          {lang === "th" ? "ซื้อสินค้าชิ้นล่าสุด" : "LATEST BUY"}
+                        </span>
+                        <span className="text-sm font-black text-emerald-400 mt-0.5 block truncate">
+                          {recentPurchases.length > 0 ? recentPurchases[0].productName : "-"}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-stone-900 border border-white/5">
+                        <span className="block text-[10px] text-stone-400 font-bold uppercase tracking-wider">
+                          {lang === "th" ? "รายการที่บันทึก" : "TOTAL RECORDED"}
+                        </span>
+                        <span className="text-sm font-black text-white mt-0.5 block">
+                          {recentPurchases.length} {lang === "th" ? "รายการล่าสุด" : "items"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Purchases List */}
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin">
+                      {recentPurchases.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center text-stone-500 py-12 space-y-3">
+                          <ShoppingBag size={32} className="opacity-20 animate-bounce" />
+                          <p className="text-xs font-light">
+                            {lang === "th" ? "ยังไม่มีข้อมูลการซื้อขายสดในระบบขณะนี้" : "No live purchase history found."}
+                          </p>
+                        </div>
+                      ) : (
+                        recentPurchases.map((tx: any, idx: number) => {
+                          const isNewest = idx === 0;
+                          
+                          // inline helper for relative times
+                          const getRelativeText = (dateStr: string) => {
+                            try {
+                              const diffMs = Date.now() - new Date(dateStr).getTime();
+                              const diffSec = Math.floor(diffMs / 1000);
+                              if (diffSec < 15) return lang === "th" ? "เมื่อสักครู่" : "just now";
+                              if (diffSec < 60) return `${diffSec} ${lang === "th" ? "วินาทีที่แล้ว" : "seconds ago"}`;
+                              const diffMin = Math.floor(diffSec / 60);
+                              if (diffMin < 60) return `${diffMin} ${lang === "th" ? "นาทีที่แล้ว" : "minutes ago"}`;
+                              const diffHr = Math.floor(diffMin / 60);
+                              if (diffHr < 24) return `${diffHr} ${lang === "th" ? "ชั่วโมงที่แล้ว" : "hours ago"}`;
+                              return new Date(dateStr).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                            } catch (e) {
+                              return "";
+                            }
+                          };
+
+                          return (
+                            <motion.div
+                              initial={isNewest ? { opacity: 0, y: -15, scale: 0.98 } : false}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              key={`${tx.id}-${idx}`}
+                              className={`p-3.5 rounded-xl border transition-all flex items-center gap-3.5 relative ${
+                                isNewest 
+                                  ? "bg-gradient-to-r from-emerald-950/45 to-stone-900/60 border-emerald-500/25 shadow-lg shadow-emerald-950/20" 
+                                  : "bg-stone-900/60 border-white/5 hover:bg-stone-900 hover:border-white/10"
+                              }`}
+                            >
+                              {/* Left Icon with color indicator */}
+                              <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${
+                                tx.type === "purchase_box" 
+                                  ? "bg-amber-500/10 border-amber-500/20 text-amber-400" 
+                                  : "bg-teal-500/10 border-teal-500/20 text-teal-400"
+                              }`}>
+                                <ShoppingBag size={16} />
+                              </div>
+
+                              {/* Details */}
+                              <div className="flex-1 min-w-0 text-left">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-black text-stone-200 truncate">
+                                    {tx.username}
+                                  </span>
+                                  {isNewest && (
+                                    <span className="px-1.5 py-0.5 bg-green-500 text-black text-[8px] font-black uppercase rounded animate-pulse">
+                                      {lang === "th" ? "ล่าสุด" : "LATEST"}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-stone-400 truncate mt-0.5">
+                                  {tx.type === "purchase_box" 
+                                    ? (lang === "th" ? "🎁 สุ่มกล่อง" : "🎁 Rolled box") 
+                                    : (lang === "th" ? "🛍️ ซื้อ" : "🛍️ Bought")
+                                  }{" "}
+                                  <span className="text-white font-medium">[{tx.productName}]</span>
+                                </p>
+                                <span className="text-[9px] text-stone-500 font-mono mt-0.5 block">
+                                  {getRelativeText(tx.date)}
+                                </span>
+                              </div>
+
+                              {/* Price */}
+                              <div className="text-right">
+                                <span className="text-xs font-bold text-emerald-400">
+                                  ฿{tx.amount.toLocaleString()}
+                                </span>
+                              </div>
+                            </motion.div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Footer notice */}
+                    <div className="p-4 border-t border-white/5 bg-white/[0.005] text-center text-[10px] text-stone-500 font-mono">
+                      {lang === "th" 
+                        ? "ดึงข้อมูลอัตโนมัติทุกๆ 8 วินาที • ปลอดภัยและเป็นส่วนตัว" 
+                        : "Autorefreshing every 8s • Secure & Sanitized"}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </AnimatePresence>
 
         </>
