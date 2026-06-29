@@ -249,6 +249,45 @@ async function startServer() {
   // Initial local copy of dynamic DB
   let db = loadDB();
 
+  // Real-time SSE Clients for live purchase notifications
+  let sseClients: any[] = [];
+
+  // Broadcast purchase to all SSE clients
+  function broadcastPurchase(tx: any) {
+    let maskedUsername = "ผู้ใช้ในระบบ";
+    if (tx.username) {
+      const len = tx.username.length;
+      if (len <= 2) {
+        maskedUsername = tx.username[0] + "*";
+      } else {
+        maskedUsername = tx.username.slice(0, 2) + "*".repeat(Math.max(1, len - 4)) + tx.username.slice(-2);
+      }
+    }
+
+    let cleanDetails = tx.details || "";
+    if (cleanDetails.includes(" - ")) {
+      cleanDetails = cleanDetails.split(" - ")[0];
+    }
+
+    const payload = {
+      id: tx.id,
+      username: maskedUsername,
+      type: tx.type,
+      amount: tx.amount,
+      details: cleanDetails,
+      date: tx.date,
+      status: tx.status
+    };
+
+    sseClients.forEach((client) => {
+      try {
+        client.write(`data: ${JSON.stringify({ type: "purchase", data: payload })}\n\n`);
+      } catch (e) {
+        console.error("Error writing to client SSE connection:", e);
+      }
+    });
+  }
+
   // Ensure seller collections exist
   if (!db.sellerVerifications) db.sellerVerifications = [];
   if (!db.withdrawals) db.withdrawals = [];
@@ -661,6 +700,11 @@ async function startServer() {
     };
     db.transactions.unshift(newTx);
     saveDB(db);
+    try {
+      broadcastPurchase(newTx);
+    } catch (e) {
+      console.error("Error broadcasting purchase event:", e);
+    }
 
     res.json({
       success: true,
@@ -1075,43 +1119,6 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
     res.json({ message: "Coupon deleted successfully" });
   });
 
-  // GET recent public purchases (Real-time live feed across the entire website)
-  app.get("/api/purchases/recent", (req, res) => {
-    if (!db.transactions) db.transactions = [];
-    const purchases = db.transactions
-      .filter((tx: any) => tx.type === "purchase_product" || tx.type === "purchase_box")
-      .slice(0, 15)
-      .map((tx: any) => {
-        // Mask username: e.g. "wichit" -> "wi***t", "bob" -> "b*b", "admin" -> "ad***"
-        let maskedUser = "ผู้ใช้ทั่วไป";
-        if (tx.username) {
-          const u = tx.username;
-          if (u.length <= 2) {
-            maskedUser = u[0] + "*";
-          } else {
-            maskedUser = u[0] + u[1] + "*".repeat(Math.max(1, u.length - 3)) + u[u.length - 1];
-          }
-        }
-
-        // Extract product name from details: [Product Name]
-        let productName = "สินค้าในร้าน";
-        const match = tx.details.match(/\[(.*?)\]/);
-        if (match && match[1]) {
-          productName = match[1];
-        }
-
-        return {
-          id: tx.id,
-          username: maskedUser,
-          productName,
-          amount: tx.amount,
-          type: tx.type,
-          date: tx.date
-        };
-      });
-    res.json(purchases);
-  });
-
   // Get Transactions (User specific, or Admin view all)
   app.get("/api/transactions", (req, res) => {
     const userId = req.headers["x-user-id"] as string;
@@ -1122,6 +1129,76 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
     } else {
       const userTxs = db.transactions.filter((tx: any) => tx.userId === userId);
       res.json(userTxs);
+    }
+  });
+
+  // Real-time SSE Stream for Live Purchase Notifications
+  app.get("/api/purchases/live-stream", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders(); // Keep connection open and flush headers
+
+    // Send connection success ping
+    res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
+
+    sseClients.push(res);
+
+    // Periodic heartbeat to prevent proxy idle timeout
+    const heartbeat = setInterval(() => {
+      try {
+        res.write(": heartbeat\n\n");
+      } catch (e) {
+        // Safe to ignore if connection is already closed
+      }
+    }, 15000);
+
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      sseClients = sseClients.filter((client) => client !== res);
+    });
+  });
+
+  // Get Recent Purchases (Publicly readable but sanitized to prevent credential leakage)
+  app.get("/api/purchases/recent", (req, res) => {
+    try {
+      const limit = Number(req.query.limit) || 10;
+      const purchases = db.transactions.filter((tx: any) => 
+        tx.type === "purchase_product" || tx.type === "purchase_box" || (tx.type && tx.type.startsWith("purchase_"))
+      );
+
+      const recentPurchases = purchases.slice(0, limit).map((tx: any) => {
+        let maskedUsername = "ผู้ใช้ในระบบ";
+        if (tx.username) {
+          const len = tx.username.length;
+          if (len <= 2) {
+            maskedUsername = tx.username[0] + "*";
+          } else {
+            maskedUsername = tx.username.slice(0, 2) + "*".repeat(Math.max(1, len - 4)) + tx.username.slice(-2);
+          }
+        }
+
+        let cleanDetails = tx.details || "";
+        if (cleanDetails.includes(" - ")) {
+          cleanDetails = cleanDetails.split(" - ")[0];
+        }
+
+        return {
+          id: tx.id,
+          username: maskedUsername,
+          type: tx.type,
+          amount: tx.amount,
+          details: cleanDetails,
+          date: tx.date,
+          status: tx.status
+        };
+      });
+
+      res.json(recentPurchases);
+    } catch (err: any) {
+      console.error("Error fetching recent purchases:", err);
+      res.status(500).json({ error: "Failed to fetch recent purchases" });
     }
   });
 
