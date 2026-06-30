@@ -187,7 +187,7 @@ export default function App() {
   };
 
   // Load backend variables
-  const loadStoreData = async () => {
+  const loadStoreData = async (roleOverride?: string) => {
     const settingsData = await safeFetch("/api/settings");
     if (settingsData) setSettings(settingsData);
     
@@ -197,8 +197,9 @@ export default function App() {
     const prodData = await safeFetch("/api/products");
     if (prodData) setProducts(prodData);
 
+    const activeRole = roleOverride || user?.role || "user";
     const coupData = await safeFetch("/api/coupons", {
-      headers: { "X-User-Role": user?.role || "user" }
+      headers: { "X-User-Role": activeRole }
     });
     if (coupData) setCoupons(coupData);
 
@@ -269,8 +270,31 @@ export default function App() {
     }
   };
 
+  // Update current user balance or attributes
+  const refreshUserSession = async (userId: string) => {
+    const data = await safeFetch(`/api/users/me/${userId}`);
+    if (data) {
+      setUser(data);
+      return data;
+    } else {
+      localStorage.removeItem("userId");
+      return null;
+    }
+  };
+
   useEffect(() => {
-    loadStoreData();
+    const initSessionAndLoad = async () => {
+      const savedUserId = localStorage.getItem("userId");
+      let activeRole = "user";
+      if (savedUserId) {
+        const loggedInUser = await refreshUserSession(savedUserId);
+        if (loggedInUser) {
+          activeRole = loggedInUser.role || "user";
+        }
+      }
+      await loadStoreData(activeRole);
+    };
+    initSessionAndLoad();
 
     // Setup dark/light theme body background classes
     const savedTheme = localStorage.getItem("theme") as "dark" | "light" | null;
@@ -281,14 +305,6 @@ export default function App() {
       document.documentElement.className = "dark";
     }
   }, []);
-
-  // Update current user balance or attributes
-  const refreshUserSession = async (userId: string) => {
-    const data = await safeFetch(`/api/users/me/${userId}`);
-    if (data) {
-      setUser(data);
-    }
-  };
 
   const handleToggleTheme = () => {
     const next = themeMode === "dark" ? "light" : "dark";
