@@ -17,7 +17,7 @@ import NamNoiMap from "./components/NamNoiMap";
 
 // Icons
 import { 
-  Check, AlertCircle, AlertTriangle, ShieldCheck, Mail, Send, Disc, ExternalLink, Heart, ArrowUpRight, Copy, Code, LayoutDashboard
+  Check, AlertCircle, AlertTriangle, ShieldCheck, Mail, Send, Disc, ExternalLink, Heart, ArrowUpRight, Copy, Code, LayoutDashboard, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -49,6 +49,10 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [floatAnnouncementClosed, setFloatAnnouncementClosed] = useState(false);
+
+  // Auto-backup states
+  const [showLocalRestoreBanner, setShowLocalRestoreBanner] = useState(false);
+  const [localBackupInfo, setLocalBackupInfo] = useState<{ siteName: string; timestamp: number } | null>(null);
 
   // Real-time chat states
   const [chatOpen, setChatOpen] = useState(false);
@@ -200,6 +204,69 @@ export default function App() {
 
     const revData = await safeFetch("/api/reviews");
     if (revData) setReviews(revData);
+  };
+
+  useEffect(() => {
+    if (user?.role === "admin" && settings) {
+      const isDefault = !settings.siteName || settings.siteName.includes("NAME WEBSITE") || settings.siteName === "NAME WEBSITE (Premium Shop)";
+      const localBackupStr = localStorage.getItem("admin_store_backup");
+      if (isDefault && localBackupStr) {
+        try {
+          const backup = JSON.parse(localBackupStr);
+          if (backup.settings && backup.settings.siteName && !backup.settings.siteName.includes("NAME WEBSITE")) {
+            setLocalBackupInfo({
+              siteName: backup.settings.siteName,
+              timestamp: backup.timestamp
+            });
+            setShowLocalRestoreBanner(true);
+          }
+        } catch (e) {
+          // ignore
+        }
+      } else if (!isDefault && settings.siteName) {
+        // Auto-save/update local backup in background
+        const backupSnapshot = {
+          settings: settings,
+          categories: categories,
+          products: products,
+          coupons: coupons,
+          timestamp: Date.now()
+        };
+        localStorage.setItem("admin_store_backup", JSON.stringify(backupSnapshot));
+      }
+    }
+  }, [user, settings, categories, products, coupons]);
+
+  const handleRestoreFromLocalBackup = async () => {
+    const localBackupStr = localStorage.getItem("admin_store_backup");
+    if (!localBackupStr) return;
+    try {
+      const backup = JSON.parse(localBackupStr);
+      const res = await fetch("/api/admin/restore", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Role": "admin"
+        },
+        body: JSON.stringify(backup)
+      });
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        // ignore
+      }
+      if (res.ok) {
+        alert("🎉 กู้คืนข้อมูลร้านค้าทั้งหมดสำเร็จเรียบร้อยแล้ว!");
+        setShowLocalRestoreBanner(false);
+        loadStoreData();
+      } else {
+        alert("เกิดข้อผิดพลาด: " + (data.error || "ไม่สามารถกู้คืนข้อมูลได้"));
+      }
+    } catch (err: any) {
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย: " + err.message);
+    }
   };
 
   useEffect(() => {
@@ -565,6 +632,34 @@ export default function App() {
                   <span>{settings.announcementBarText}</span>
                   <span>{settings.announcementBarText}</span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Local Backup Recovery Banner for Admin */}
+          {showLocalRestoreBanner && localBackupInfo && (
+            <div className="w-full bg-gradient-to-r from-amber-600 via-amber-700 to-red-700 text-white font-sans font-bold py-3 px-4 z-40 relative shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 animate-pulse border-b border-white/20">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">⚠️</span>
+                <div className="text-xs text-left">
+                  <div>ตรวจพบข้อมูลสำรองล่าสุดในเบราว์เซอร์นี้สำหรับชื่อร้าน <span className="underline decoration-2 text-yellow-300 font-extrabold">{localBackupInfo.siteName}</span></div>
+                  <div className="opacity-85 text-[10px] font-medium mt-0.5">บันทึกเมื่อ: {new Date(localBackupInfo.timestamp).toLocaleString("th-TH")} (เพื่อความปลอดภัยจากการที่เซิร์ฟเวอร์สำรองถูกรีเซ็ตหรือล้างข้อมูล)</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button 
+                  onClick={handleRestoreFromLocalBackup}
+                  className="bg-white hover:bg-stone-100 text-amber-950 font-black px-4 py-1.5 rounded-lg text-xs cursor-pointer shadow transition-all hover:scale-105"
+                >
+                  ⚡ กู้คืนข้อมูลทันที (Restore)
+                </button>
+                <button 
+                  onClick={() => setShowLocalRestoreBanner(false)}
+                  className="bg-black/20 hover:bg-black/30 text-white p-1.5 rounded-lg text-xs cursor-pointer transition-all"
+                  title="ละเว้น"
+                >
+                  <X size={14} />
+                </button>
               </div>
             </div>
           )}

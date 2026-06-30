@@ -356,7 +356,94 @@ async function startServer() {
     }
     db.settings = { ...db.settings, ...req.body };
     saveDB(db);
+
+    // Attempt to persist settings inside server.ts for permanent source-code backing
+    try {
+      const serverCodePath = path.join(process.cwd(), "server.ts");
+      if (fs.existsSync(serverCodePath)) {
+        let serverCode = fs.readFileSync(serverCodePath, "utf-8");
+        const startMarker = "    settings: {";
+        const endMarker = "    } as AppSettings,";
+        const startIndex = serverCode.indexOf(startMarker);
+        const endIndex = serverCode.indexOf(endMarker);
+        if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+          const settingsStr = JSON.stringify(db.settings, null, 2)
+            .split("\n")
+            .map((line, i) => i === 0 ? line : "      " + line)
+            .join("\n");
+          
+          const before = serverCode.substring(0, startIndex);
+          const after = serverCode.substring(endIndex);
+          const newCode = before + "    settings: " + settingsStr + "\n" + "  " + after;
+          fs.writeFileSync(serverCodePath, newCode, "utf-8");
+          console.log("Successfully persisted settings to server.ts source code!");
+        }
+      }
+    } catch (sourceErr) {
+      console.error("Failed to persist settings to server.ts source code:", sourceErr);
+    }
+
     res.json({ message: "Successfully updated settings", settings: db.settings });
+  });
+
+  // Get Full DB Backup (Admin only)
+  app.get("/api/admin/backup", (req, res) => {
+    const adminCheck = req.headers["x-user-role"];
+    if (adminCheck !== "admin") {
+      return res.status(403).json({ error: "Unauthorized access" });
+    }
+    res.json(db);
+  });
+
+  // Restore DB Backup (Admin only)
+  app.post("/api/admin/restore", (req, res) => {
+    const adminCheck = req.headers["x-user-role"];
+    if (adminCheck !== "admin") {
+      return res.status(403).json({ error: "Unauthorized access" });
+    }
+    const backupData = req.body;
+    if (!backupData || typeof backupData !== "object") {
+      return res.status(400).json({ error: "ข้อมูลสำรองไม่ถูกต้อง" });
+    }
+
+    if (!backupData.settings || !backupData.products || !backupData.categories) {
+      return res.status(400).json({ error: "ข้อมูลสำรองไม่ถูกต้อง (ขาดโครงสร้างหลัก เช่น settings, products, categories)" });
+    }
+
+    // Merge or overwrite database
+    db = {
+      ...db,
+      ...backupData
+    };
+    saveDB(db);
+
+    // Also attempt to persist settings to server.ts source code
+    try {
+      const serverCodePath = path.join(process.cwd(), "server.ts");
+      if (fs.existsSync(serverCodePath)) {
+        let serverCode = fs.readFileSync(serverCodePath, "utf-8");
+        const startMarker = "    settings: {";
+        const endMarker = "    } as AppSettings,";
+        const startIndex = serverCode.indexOf(startMarker);
+        const endIndex = serverCode.indexOf(endMarker);
+        if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+          const settingsStr = JSON.stringify(db.settings, null, 2)
+            .split("\n")
+            .map((line, i) => i === 0 ? line : "      " + line)
+            .join("\n");
+          
+          const before = serverCode.substring(0, startIndex);
+          const after = serverCode.substring(endIndex);
+          const newCode = before + "    settings: " + settingsStr + "\n" + "  " + after;
+          fs.writeFileSync(serverCodePath, newCode, "utf-8");
+          console.log("Successfully persisted restored settings to server.ts source code!");
+        }
+      }
+    } catch (sourceErr) {
+      console.error("Failed to persist restored settings to server.ts source code:", sourceErr);
+    }
+
+    res.json({ message: "กู้คืนระบบทั้งหมดสำเร็จแล้ว!", settings: db.settings });
   });
 
   // Get All Categories

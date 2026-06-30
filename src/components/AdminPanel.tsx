@@ -136,6 +136,11 @@ export default function AdminPanel({
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Backup & Restore states
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupSuccessMsg, setBackupSuccessMsg] = useState("");
+  const [backupErrorMsg, setBackupErrorMsg] = useState("");
+
   // Custom confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -588,6 +593,96 @@ export default function AdminPanel({
       alert("บันทึกการตั้งค่าร้านค้าเสร็จสมบูรณ์!");
     } catch (err) {
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
+  const handleDownloadBackup = async () => {
+    setBackupLoading(true);
+    setBackupErrorMsg("");
+    setBackupSuccessMsg("");
+    try {
+      const res = await fetch("/api/admin/backup", {
+        headers: {
+          "X-User-Role": "admin"
+        }
+      });
+      if (!res.ok) throw new Error("ไม่สามารถเรียกขอข้อมูลสำรองจากเซิร์ฟเวอร์");
+      const dbData = await res.json();
+      
+      // Create local file download
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(dbData, null, 2)
+      )}`;
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", jsonString);
+      const filename = `premium_shop_backup_${new Date().toISOString().slice(0,10)}.json`;
+      downloadAnchor.setAttribute("download", filename);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      
+      setBackupSuccessMsg("ดาวน์โหลดไฟล์สำรองข้อมูลสำเร็จ!");
+    } catch (err: any) {
+      setBackupErrorMsg("เกิดข้อผิดพลาด: " + err.message);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleUploadBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBackupLoading(true);
+    setBackupErrorMsg("");
+    setBackupSuccessMsg("");
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const content = event.target?.result as string;
+          const backupData = JSON.parse(content);
+
+          // Quick schema validation
+          if (!backupData.settings || !backupData.products || !backupData.categories) {
+            setBackupErrorMsg("โครงสร้างไฟล์สำรองไม่ถูกต้อง (ต้องมีฟิลด์ settings, products และ categories)");
+            setBackupLoading(false);
+            return;
+          }
+
+          const res = await fetch("/api/admin/restore", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-User-Role": "admin"
+            },
+            body: JSON.stringify(backupData)
+          });
+          const text = await res.text();
+          let data: any = {};
+          try { data = JSON.parse(text); } catch(pe) {}
+
+          if (res.ok) {
+            setBackupSuccessMsg("กู้คืนข้อมูลระบบทั้งหมดสำเร็จเรียบร้อยแล้ว!");
+            onRefreshData();
+            setTimeout(() => {
+              alert("กู้คืนระบบทั้งหมดสำเร็จ! กำลังรีเฟรชหน้าต่างร้านค้า...");
+              window.location.reload();
+            }, 1000);
+          } else {
+            setBackupErrorMsg(data.error || "เซิร์ฟเวอร์ปฏิเสธการกู้คืนข้อมูล");
+          }
+        } catch (parseErr: any) {
+          setBackupErrorMsg("ไฟล์ JSON ไม่ถูกต้อง หรือไม่สมบูรณ์: " + parseErr.message);
+        } finally {
+          setBackupLoading(false);
+        }
+      };
+      reader.readAsText(file);
+    } catch (err: any) {
+      setBackupErrorMsg("เกิดข้อผิดพลาดในการอ่านไฟล์: " + err.message);
+      setBackupLoading(false);
     }
   };
 
@@ -2208,7 +2303,8 @@ export default function AdminPanel({
 
             {/* T5: Site Settings editor */}
             {activeTab === "settings" && (
-              <form onSubmit={handleUpdateSettingsSubmit} className="space-y-4 text-xs text-slate-300">
+              <>
+                <form onSubmit={handleUpdateSettingsSubmit} className="space-y-4 text-xs text-slate-300">
                 <span className="text-xs text-slate-500 font-semibold block">ควบคุมการแสดงผลและข้อมูลติดต่อของร้านค้าประยุกต์</span>
                 
                 <div className="grid grid-cols-2 gap-3 bg-slate-950/40 p-4 rounded-2xl border border-white/5">
@@ -2862,7 +2958,73 @@ export default function AdminPanel({
                   <button type="submit" className="bg-gradient-to-r from-teal-500 to-emerald-400 text-slate-950 font-bold py-2.5 px-6 rounded-xl hover:scale-102 transition-all">บันทึกการตั้งค่าทั้งสิ้น</button>
                 </div>
               </form>
-             )}
+
+              {/* BACKUP & RESTORE SECTION */}
+              <div className="mt-8 bg-slate-950/40 p-5 rounded-2xl border border-white/5 space-y-4 text-xs">
+                <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                  <Database size={16} className="text-teal-400" />
+                  <div>
+                    <h4 className="font-extrabold text-sm text-white uppercase tracking-wider">🗄️ ระบบสำรองและกู้คืนข้อมูลร้านค้า (Store Database Backup & Restore)</h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5">ปกป้องข้อมูลของคุณจากการรีเซ็ตเมื่อรีสตาร์ทเซิร์ฟเวอร์ หรือนำข้อมูลไปกู้คืนเมื่อเปิดใช้งานเว็บใหม่</p>
+                  </div>
+                </div>
+
+                {backupSuccessMsg && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl font-bold text-xs">
+                    {backupSuccessMsg}
+                  </div>
+                )}
+
+                {backupErrorMsg && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl font-bold text-xs">
+                    {backupErrorMsg}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {/* DOWNLOAD SECTION */}
+                  <div className="bg-slate-950/60 p-4 rounded-xl border border-white/5 flex flex-col justify-between space-y-3">
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-extrabold text-teal-400 block uppercase">1. ดาวน์โหลดข้อมูลสำรอง (Export)</span>
+                      <p className="text-[10.5px] text-slate-400">บันทึกโครงสร้างร้านค้าทั้งหมด ได้แก่ ผลิตภัณฑ์, หมวดหมู่, คูปอง, สมาชิก, รายการสั่งซื้อ และการตั้งค่าร้านค้า ทั้งหมดลงในเครื่องคอมพิวเตอร์ของคุณในรูปแบบไฟล์เดียว (.json)</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDownloadBackup}
+                      disabled={backupLoading}
+                      className="w-full bg-slate-900 hover:bg-slate-850 border border-teal-500/30 text-teal-300 font-extrabold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Database size={14} />
+                      {backupLoading ? "กำลังประมวลผล..." : "ดาวน์โหลดข้อมูลสำรองทันที"}
+                    </button>
+                  </div>
+
+                  {/* UPLOAD SECTION */}
+                  <div className="bg-slate-950/60 p-4 rounded-xl border border-white/5 flex flex-col justify-between space-y-3">
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-extrabold text-amber-400 block uppercase">2. กู้คืนข้อมูลผ่านไฟล์สำรอง (Import / Restore)</span>
+                      <p className="text-[10.5px] text-slate-400">เลือกไฟล์ข้อมูลสำรอง (.json) ที่เคยดาวน์โหลดไว้เพื่อเขียนทับและกู้คืนระบบหลังบ้านทั้งหมดกลับมาทำงานในเซิร์ฟเวอร์นี้ทันที</p>
+                    </div>
+                    <label className="w-full bg-gradient-to-r from-amber-600/20 to-red-600/20 hover:from-amber-600/30 hover:to-red-600/30 border border-amber-500/30 text-amber-300 font-extrabold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer text-center disabled:opacity-50">
+                      <Upload size={14} />
+                      <span>{backupLoading ? "กำลังอัปโหลด..." : "เลือกไฟล์สำรองข้อมูล (.json)"}</span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleUploadBackup}
+                        disabled={backupLoading}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-[10.5px] text-slate-400 leading-relaxed">
+                  💡 <strong className="text-white">ระบบสำรองข้อมูลเบราว์เซอร์อัตโนมัติ (LocalStorage Auto-Backup):</strong> ทุกครั้งที่คุณทำการปรับแต่งข้อมูลหลังบ้านหรือเพิ่มสินค้า ระบบจะแอบสำรองข้อมูลที่ปลอดภัยไว้ในเบราว์เซอร์นี้โดยอัตโนมัติ หากเว็ปไซต์เกิดขัดข้องหรือรีสตาร์ท คุณจะได้รับการแจ้งเตือนให้กดกู้คืนทันทีใน 1 วินาทีเมื่อเปิดหน้าเว็ป
+                </div>
+              </div>
+            </>
+          )}
 
             {/* Orders & Shipping Tracking tab */}
             {activeTab === "orders" && (
