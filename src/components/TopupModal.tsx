@@ -25,6 +25,7 @@ export default function TopupModal({
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [slipStatus, setSlipStatus] = useState("");
+  const [slipUrlInput, setSlipUrlInput] = useState("");
 
   const activeColor = "text-[#8E6D4E]";
   const borderActive = "border-[#8E6D4E]";
@@ -124,6 +125,66 @@ export default function TopupModal({
       setQrError("เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่ายเซิร์ฟเวอร์สำรอง: " + (e.message || e));
     } finally {
       setQrLoading(false);
+    }
+  };
+
+  const verifyUrl = async (url: string) => {
+    setQrLoading(true);
+    setQrSuccessMessage("");
+    setQrError("");
+    setSlipStatus("กำลังตรวจสอบรูปภาพสลิปจากลิงก์ URL...");
+    try {
+      setSlipStatus("กำลังวิเคราะห์ QR Code จากรูปภาพลิงก์...");
+      let qrPayload: string | null = null;
+      try {
+        qrPayload = await scanQrCode(url);
+      } catch (err) {
+        console.warn("CORS/Canvas scan failed, server will try to resolve:", err);
+      }
+      
+      setSlipStatus("กำลังส่งข้อมูลสลิปไปให้ผู้เชี่ยวชาญตรวจสอบ...");
+      const resp = await fetch("/api/payments/verify-slip", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Id": user?.id || ""
+        },
+        body: JSON.stringify({
+          qrPayload: qrPayload || undefined,
+          slipRef: "REF-URL-" + Math.floor(100000 + Math.random() * 900000),
+          slipImage: url
+        })
+      });
+      const text = await resp.text();
+      if (!text || text.trim().startsWith("<")) {
+        setSlipStatus("");
+        setQrError("เซิร์ฟเวอร์ตอบสนองไม่พึงประสงค์ (รูปแบบ HTML) กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
+      const data = JSON.parse(text);
+      if (resp.ok && data.success) {
+        setSlipStatus("");
+        setQrSuccessMessage(data.message || `ระบบตรวจสอบสลิปสำเร็จ! ยอดเงินถูกเติมเรียบร้อยแล้ว`);
+        setSlipUrlInput("");
+        setSelectedFile(null);
+        onTopupSuccess(data.amount, data.newBalance);
+      } else {
+        setSlipStatus("");
+        setQrError(data.error || "ตรวจสอบสลิปไม่สำเร็จ กรุณาเช็คว่าเป็นภาพสลิปจริง หรือลองอัปโหลดอีกครั้ง");
+      }
+    } catch (e: any) {
+      console.error(e);
+      setSlipStatus("");
+      setQrError("เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่ายเซิร์ฟเวอร์สำรอง: " + (e.message || e));
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleSlipUrlSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (slipUrlInput.trim()) {
+      verifyUrl(slipUrlInput.trim());
     }
   };
 
@@ -306,6 +367,30 @@ export default function TopupModal({
                     {selectedFile ? selectedFile.name : "ลากรูปสลิปมาวางที่นี่ หรือแตะเพื่ออัปโหลด"}
                   </span>
                   <span className="text-[9px] text-stone-500">รูปแบบไฟล์ .PNG, .JPG (จำแนกสลิปอัจฉริยะ)</span>
+                </div>
+              </div>
+
+              {/* Optional slip URL input */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center gap-2 text-[10px] text-stone-400 font-bold uppercase justify-center">
+                  <span>— หรือใส่ลิงก์ URL ของภาพสลิป —</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    placeholder="ป้อนลิงก์ URL รูปภาพสลิป เช่น https://..."
+                    value={slipUrlInput}
+                    onChange={(e) => setSlipUrlInput(e.target.value)}
+                    className="flex-1 bg-white dark:bg-[#151210] border border-[#8E6D4E]/20 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#8E6D4E] text-[#4E3B2C] dark:text-stone-100 placeholder-stone-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSlipUrlSubmit}
+                    disabled={!slipUrlInput.trim()}
+                    className="px-4 py-2.5 bg-[#8E6D4E] hover:bg-[#725437] disabled:opacity-40 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex-shrink-0"
+                  >
+                    ตรวจสอบลิงก์
+                  </button>
                 </div>
               </div>
 

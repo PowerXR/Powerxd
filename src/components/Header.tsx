@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Coins, Sun, Moon, LogOut, Settings, LayoutDashboard, UserPlus, LogIn, Menu, X, Compass, Palette, User as UserIcon, Globe } from "lucide-react";
+import { Coins, Sun, Moon, LogOut, Settings, LayoutDashboard, UserPlus, LogIn, Menu, X, Compass, Palette, User as UserIcon, Globe, MessageSquare } from "lucide-react";
 import { User, AppSettings } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { Language, getTranslation } from "../lib/translations";
@@ -17,6 +17,7 @@ interface HeaderProps {
   onLogout: () => void;
   lang: Language;
   setLang: (lang: Language) => void;
+  onOpenChat: () => void;
 }
 
 export default function Header({
@@ -31,7 +32,8 @@ export default function Header({
   onOpenSellerDashboard,
   onLogout,
   lang,
-  setLang
+  setLang,
+  onOpenChat
 }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -205,6 +207,17 @@ export default function Header({
                         >
                           <Settings size={14} />
                           <span>{user.role?.startsWith('seller') ? "แผงควบคุมร้านค้า" : "สมัครเป็นผู้ขาย"}</span>
+                        </button>
+
+                        <button 
+                          onClick={() => { setDropdownOpen(false); onOpenChat(); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-[#8E6D4E]/5 rounded-lg transition-colors text-left cursor-pointer"
+                        >
+                          <MessageSquare size={14} />
+                          <span>
+                            {user.role === "admin" ? "จัดการระบบแชทชุมชน" : 
+                             user.role?.startsWith("seller") ? "ข้อความจากลูกค้า" : "แชทของฉัน (My Chat)"}
+                          </span>
                         </button>
 
                         <button 

@@ -152,3 +152,58 @@ export interface Review {
   comment: string;
   date: string;
 }
+
+export interface Conversation {
+  id: string;
+  customerId: string;
+  sellerId: string;
+  shopId: string;
+  lastMessage: string;
+  lastMessageAt: string;
+  status: 'active' | 'closed' | 'blocked';
+  createdAt: string;
+  isTypingSeller?: boolean; // temporary typing state
+  isTypingCustomer?: boolean; // temporary typing state
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  message: string;
+  messageType: 'text' | 'image' | 'product' | 'order' | 'paymentSlip' | 'location';
+  image?: string;
+  isRead: boolean;
+  createdAt: string;
+  replyToId?: string; // ID of message being replied to
+  replyToMessage?: string; // Text content being replied to
+  productInfo?: {
+    id: string;
+    name: string;
+    price: number;
+    imageUrl: string;
+    description: string;
+  };
+  orderInfo?: {
+    id: string;
+    productName: string;
+    amount: number;
+    status: string;
+    date: string;
+  };
+  locationInfo?: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+}
+

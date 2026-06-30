@@ -10,6 +10,8 @@ import AdminPanel from "./components/AdminPanel";
 import AuthModal from "./components/AuthModal";
 import HistoryModal from "./components/HistoryModal";
 import SellerModal from "./components/SellerModal";
+import CommunityChat from "./components/CommunityChat";
+import { MessageSquare } from "lucide-react";
 import NamNoiMap from "./components/NamNoiMap";
 
 
@@ -47,6 +49,11 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [floatAnnouncementClosed, setFloatAnnouncementClosed] = useState(false);
+
+  // Real-time chat states
+  const [chatOpen, setChatOpen] = useState(false);
+  const [activeChatSellerId, setActiveChatSellerId] = useState<string | null>(null);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   // Real-time live purchase notifications state
   const [livePurchases, setLivePurchases] = useState<any[]>([]);
@@ -106,6 +113,39 @@ export default function App() {
       }
     };
   }, []);
+
+  // Chat unread count synchronization
+  const updateUnreadChatCount = async () => {
+    if (!user) {
+      setUnreadChatCount(0);
+      return;
+    }
+    try {
+      const res = await fetch("/api/chat/conversations", {
+        headers: {
+          "x-user-id": user.id,
+          "x-user-role": user.role
+        }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const totalUnread = data.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0);
+        setUnreadChatCount(totalUnread);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    updateUnreadChatCount();
+    if (user) {
+      const interval = setInterval(updateUnreadChatCount, 15000);
+      return () => clearInterval(interval);
+    } else {
+      setUnreadChatCount(0);
+    }
+  }, [user, chatOpen]);
 
   useEffect(() => {
     if (settings && settings.announcementActive) {
@@ -543,6 +583,7 @@ export default function App() {
             onLogout={handleLogout}
             lang={lang}
             setLang={setLang}
+            onOpenChat={() => setChatOpen(true)}
           />
 
           {/* Banner Slider */}
@@ -866,6 +907,10 @@ export default function App() {
                 onClose={() => setSelectedProduct(null)}
                 onPurchase={handlePurchaseProduct}
                 lang={lang}
+                onChatWithSeller={(sellerId) => {
+                  setActiveChatSellerId(sellerId);
+                  setChatOpen(true);
+                }}
               />
             )}
 
@@ -907,6 +952,44 @@ export default function App() {
                 }}
               />
             )}
+
+            {/* Real-time floating community chat button with badge */}
+            {user && (
+              <motion.button
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setChatOpen(true)}
+                className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-[#16A34A] hover:bg-[#128A3E] text-white rounded-full shadow-2xl cursor-pointer transition-all border border-emerald-500/25 select-none"
+              >
+                <div className="relative">
+                  <MessageSquare size={18} />
+                  {unreadChatCount > 0 && (
+                    <span className="absolute -top-2.5 -right-2.5 bg-red-500 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border border-white animate-pulse">
+                      {unreadChatCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs font-black tracking-wide hidden sm:inline">
+                  {user.role === "admin" ? "จัดการแชทส่วนกลาง" : 
+                   user.role?.startsWith("seller") ? "ข้อความลูกค้า" : "แชทชุมชน"}
+                </span>
+              </motion.button>
+            )}
+
+            {/* Real-time Community Chat Drawer/Modal Panel */}
+            <AnimatePresence>
+              {chatOpen && (
+                <CommunityChat 
+                  user={user} 
+                  onClose={() => { setChatOpen(false); setActiveChatSellerId(null); }} 
+                  products={products}
+                  lang={lang}
+                  activeSellerId={activeChatSellerId}
+                />
+              )}
+            </AnimatePresence>
 
             {/* 6. Announcement Welcome Popup Modal */}
             {announcementOpen && settings && settings.announcementActive && (
@@ -1122,7 +1205,7 @@ export default function App() {
           {/* Live Purchase Toast Notifications */}
           <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 max-w-sm pointer-events-none">
             <AnimatePresence>
-              {livePurchases.map((purchase) => (
+              {livePurchases.filter((p, idx, self) => self.findIndex((item) => item.toastId === p.toastId) === idx).map((purchase) => (
                 <motion.div
                   key={purchase.toastId}
                   initial={{ opacity: 0, x: 50, scale: 0.9 }}

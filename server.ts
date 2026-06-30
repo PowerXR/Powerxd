@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppSettings, Category, Product, User, Coupon, Transaction, Review, BoxItem } from "./src/types";
+import { AppSettings, Category, Product, User, Coupon, Transaction, Review, BoxItem, Conversation, Message, Notification } from "./src/types";
 
 // Database storage setup
 const DB_FILE = path.join(process.cwd(), "db.json");
@@ -222,6 +222,9 @@ function loadDB() {
           data.settings.landmarks = defaultDB.settings.landmarks;
         }
       }
+      if (!data.conversations) data.conversations = [];
+      if (!data.messages) data.messages = [];
+      if (!data.notifications) data.notifications = [];
       return data;
     } else {
       fs.writeFileSync(DB_FILE, JSON.stringify(defaultDB, null, 2), "utf-8");
@@ -737,13 +740,40 @@ async function startServer() {
 
     const mockRef = slipRef || "REF-API-" + Math.floor(100000 + Math.random() * 900000);
 
-    // 1. If we received a real slip image (Base64) and the API Key or Gemini is available
+    // 1. If we received a real slip image (Base64 or URL) and the API Key or Gemini is available
     if (slipImage && !isSimulation) {
       let base64Part = "";
-      if (slipImage.includes(",")) {
-        base64Part = slipImage.split(",")[1];
+      let mimeType = "image/png";
+
+      if (slipImage.startsWith("http://") || slipImage.startsWith("https://")) {
+        try {
+          console.log(`Downloading slip image from URL: ${slipImage}`);
+          const fetchResp = await fetch(slipImage);
+          if (fetchResp.ok) {
+            const arrayBuffer = await fetchResp.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            base64Part = buffer.toString("base64");
+            mimeType = fetchResp.headers.get("content-type") || "image/png";
+          } else {
+            throw new Error(`เซิร์ฟเวอร์ตอบสนองด้วยสถานะ: ${fetchResp.status}`);
+          }
+        } catch (err: any) {
+          console.error("Failed to download slip image from URL:", err);
+          return res.status(400).json({
+            success: false,
+            error: "ไม่สามารถดึงรูปภาพสลิปจากลิงก์ URL ที่ระบุได้: " + err.message
+          });
+        }
       } else {
-        base64Part = slipImage;
+        if (slipImage.includes(",")) {
+          base64Part = slipImage.split(",")[1];
+          const match = slipImage.split(",")[0].match(/data:(.*?);base64/);
+          if (match) {
+            mimeType = match[1];
+          }
+        } else {
+          base64Part = slipImage;
+        }
       }
 
       let thunderErrorLocal: { errCode: string; errMsg: string; status: number } | null = null;
@@ -754,15 +784,6 @@ async function startServer() {
       try {
         console.log("Calling Thunder.in.th API for image-based bank slip verification...");
         
-        let mimeType = "image/png";
-        if (slipImage.includes(",")) {
-          const parts = slipImage.split(",");
-          const match = parts[0].match(/data:(.*?);base64/);
-          if (match) {
-            mimeType = match[1];
-          }
-        }
-
         const buffer = Buffer.from(base64Part, "base64");
         const blob = new Blob([buffer], { type: mimeType });
         
@@ -2241,6 +2262,432 @@ CREATE TABLE IF NOT EXISTS reviews (
       ],
       instructions: instructionsText
     });
+  });
+
+  // ==========================================
+  // --- REAL-TIME COMMUNITY CHAT API ROUTES ---
+  // ==========================================
+
+  // Broadcast data helper to all SSE Clients
+  function broadcastChatEvent(data: any) {
+    sseClients.forEach((client) => {
+      try {
+        client.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch (err) {
+        // Safe to ignore if client disconnected
+      }
+    });
+  }
+
+  // Helper to resolve sender/receiver profile details
+  function getUserProfile(userId: string) {
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) return { username: "ผู้ใช้ทั่วไป", avatarUrl: "" };
+    return {
+      username: user.username,
+      avatarUrl: user.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.username}`
+    };
+  }
+
+  // GET Conversations for active user
+  app.get("/api/chat/conversations", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const role = req.headers["x-user-role"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อนใช้งาน" });
+
+    let filtered = [];
+    if (role === "admin") {
+      filtered = db.conversations;
+    } else if (role === "seller_internal" || role === "seller_external") {
+      filtered = db.conversations.filter((c: any) => c.sellerId === userId);
+    } else {
+      filtered = db.conversations.filter((c: any) => c.customerId === userId);
+    }
+
+    const populated = filtered.map((c: any) => {
+      const customer = db.users.find((u: any) => u.id === c.customerId);
+      const seller = db.users.find((u: any) => u.id === c.sellerId);
+      const verification = db.sellerVerifications.find((v: any) => v.userId === c.sellerId);
+
+      const unreadCount = db.messages.filter((m: any) => 
+        m.conversationId === c.id && 
+        m.senderId !== userId && 
+        !m.isRead
+      ).length;
+
+      return {
+        ...c,
+        customerName: customer?.username || "ลูกค้าในระบบ",
+        customerAvatar: customer?.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${customer?.username || "customer"}`,
+        shopName: verification?.shopName || seller?.username || "ร้านค้าชุมชนน้ำน้อย",
+        shopLogo: verification?.logoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${verification?.shopName || "Shop"}&backgroundColor=16A34A`,
+        unreadCount
+      };
+    });
+
+    // Sort by latest message
+    populated.sort((a: any, b: any) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+    res.json(populated);
+  });
+
+  // POST Create or Open existing conversation
+  app.post("/api/chat/conversations", (req, res) => {
+    const customerId = req.headers["x-user-id"] as string;
+    if (!customerId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อนใช้งาน" });
+
+    const { sellerId, shopId } = req.body;
+    if (!sellerId) return res.status(400).json({ error: "ระบุรหัสผู้ขายหรือร้านค้า" });
+
+    // Ensure customer is not chatting with themselves
+    if (customerId === sellerId) {
+      return res.status(400).json({ error: "ไม่สามารถเปิดห้องแชทกับตนเองได้" });
+    }
+
+    let conv = db.conversations.find((c: any) => c.customerId === customerId && c.sellerId === sellerId);
+
+    if (!conv) {
+      conv = {
+        id: `conv_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        customerId,
+        sellerId,
+        shopId: shopId || sellerId,
+        lastMessage: "เริ่มเปิดห้องสนทนาใหม่เพื่อปรึกษาผลิตภัณฑ์",
+        lastMessageAt: new Date().toISOString(),
+        status: "active",
+        createdAt: new Date().toISOString()
+      };
+      db.conversations.push(conv);
+      saveDB(db);
+
+      // Broadcast new room creation to seller & customer
+      broadcastChatEvent({ type: "new_conversation", conversation: conv });
+    } else {
+      // Re-activate if it was closed
+      if (conv.status === "closed") {
+        conv.status = "active";
+        conv.lastMessageAt = new Date().toISOString();
+        saveDB(db);
+        broadcastChatEvent({ type: "conversation_status_updated", conversationId: conv.id, status: "active" });
+      }
+    }
+
+    res.json(conv);
+  });
+
+  // GET Messages in a specific conversation
+  app.get("/api/chat/conversations/:id/messages", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const role = req.headers["x-user-role"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อนใช้งาน" });
+
+    const conv = db.conversations.find((c: any) => c.id === req.params.id);
+    if (!conv) return res.status(404).json({ error: "ไม่พบห้องสนทนานี้" });
+
+    // Validate access: must be Customer, Seller, or Admin
+    if (role !== "admin" && conv.customerId !== userId && conv.sellerId !== userId) {
+      return res.status(403).json({ error: "คุณไม่มีสิทธิ์เข้าถึงห้องสนทนานี้" });
+    }
+
+    const messages = db.messages.filter((m: any) => m.conversationId === conv.id);
+    res.json(messages);
+  });
+
+  // POST Send new message
+  app.post("/api/chat/conversations/:id/messages", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const role = req.headers["x-user-role"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อนใช้งาน" });
+
+    const conv = db.conversations.find((c: any) => c.id === req.params.id);
+    if (!conv) return res.status(404).json({ error: "ไม่พบห้องสนทนานี้" });
+
+    if (role !== "admin" && conv.customerId !== userId && conv.sellerId !== userId) {
+      return res.status(403).json({ error: "คุณไม่มีสิทธิ์ส่งข้อความในห้องสนทนานี้" });
+    }
+
+    if (conv.status === "blocked" && role !== "admin") {
+      return res.status(403).json({ error: "ห้องแชทนี้ถูกระงับ/บล็อกไว้ชั่วคราวเนื่องจากทำผิดเงื่อนไข" });
+    }
+
+    const { 
+      message, 
+      messageType, 
+      image, 
+      replyToId, 
+      replyToMessage, 
+      productInfo, 
+      orderInfo, 
+      locationInfo 
+    } = req.body;
+
+    const newMsg: Message = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      conversationId: conv.id,
+      senderId: userId,
+      message: message || "",
+      messageType: messageType || "text",
+      image: image || undefined,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      replyToId: replyToId || undefined,
+      replyToMessage: replyToMessage || undefined,
+      productInfo: productInfo || undefined,
+      orderInfo: orderInfo || undefined,
+      locationInfo: locationInfo || undefined
+    };
+
+    db.messages.push(newMsg);
+
+    // Update conversation last message state
+    let previewText = message || "";
+    if (messageType === "image") previewText = "📸 ส่งรูปภาพ";
+    else if (messageType === "product") previewText = "📦 แนะนำสินค้า";
+    else if (messageType === "order") previewText = "🧾 ข้อมูลคำสั่งซื้อ";
+    else if (messageType === "paymentSlip") previewText = "💵 แนบสลิปการโอนเงิน";
+    else if (messageType === "location") previewText = "📍 แชร์พิกัดตำแหน่ง";
+
+    conv.lastMessage = previewText;
+    conv.lastMessageAt = newMsg.createdAt;
+
+    // If room is closed, automatically reopen it on new message
+    if (conv.status === "closed") {
+      conv.status = "active";
+      broadcastChatEvent({ type: "conversation_status_updated", conversationId: conv.id, status: "active" });
+    }
+
+    saveDB(db);
+
+    // Real-time broadcast
+    broadcastChatEvent({ type: "chat_message", message: newMsg });
+
+    // Generate notification for recipient
+    const recipientId = userId === conv.customerId ? conv.sellerId : conv.customerId;
+    const senderProfile = getUserProfile(userId);
+
+    const notif: Notification = {
+      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      userId: recipientId,
+      title: `ข้อความใหม่จาก ${senderProfile.username}`,
+      body: previewText,
+      isRead: false,
+      createdAt: newMsg.createdAt
+    };
+
+    db.notifications.push(notif);
+    saveDB(db);
+
+    // Broadcast real-time notification
+    broadcastChatEvent({ type: "notification", notification: notif });
+
+    res.json(newMsg);
+  });
+
+  // POST Mark messages as read
+  app.post("/api/chat/conversations/:id/read", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อนใช้งาน" });
+
+    const conv = db.conversations.find((c: any) => c.id === req.params.id);
+    if (!conv) return res.status(404).json({ error: "ไม่พบห้องสนทนานี้" });
+
+    let count = 0;
+    db.messages.forEach((m: any) => {
+      if (m.conversationId === conv.id && m.senderId !== userId && !m.isRead) {
+        m.isRead = true;
+        count++;
+      }
+    });
+
+    if (count > 0) {
+      saveDB(db);
+      // Broadcast read receipt
+      broadcastChatEvent({ type: "messages_read", conversationId: conv.id, readerId: userId });
+    }
+
+    res.json({ success: true, count });
+  });
+
+  // POST Typing status broadcast
+  app.post("/api/chat/conversations/:id/typing", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบ" });
+
+    const { isTyping } = req.body;
+    broadcastChatEvent({
+      type: "typing",
+      conversationId: req.params.id,
+      userId,
+      isTyping: !!isTyping
+    });
+
+    res.json({ success: true });
+  });
+
+  // DELETE Soft delete a message (Sender or Admin)
+  app.delete("/api/chat/messages/:id", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const role = req.headers["x-user-role"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อนใช้งาน" });
+
+    const msg = db.messages.find((m: any) => m.id === req.params.id);
+    if (!msg) return res.status(404).json({ error: "ไม่พบข้อความนี้" });
+
+    if (msg.senderId !== userId && role !== "admin") {
+      return res.status(403).json({ error: "คุณไม่มีสิทธิ์ลบข้อความนี้" });
+    }
+
+    // Apply soft delete / mask
+    msg.message = "ข้อความนี้ถูกลบไปแล้ว";
+    msg.messageType = "text";
+    msg.image = undefined;
+    msg.productInfo = undefined;
+    msg.orderInfo = undefined;
+    msg.locationInfo = undefined;
+
+    saveDB(db);
+
+    broadcastChatEvent({ type: "message_deleted", messageId: msg.id, conversationId: msg.conversationId });
+    res.json({ success: true, message: msg });
+  });
+
+  // POST Update conversation status (Close, Block, Active)
+  app.post("/api/chat/conversations/:id/status", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const role = req.headers["x-user-role"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อนใช้งาน" });
+
+    const conv = db.conversations.find((c: any) => c.id === req.params.id);
+    if (!conv) return res.status(404).json({ error: "ไม่พบห้องสนทนานี้" });
+
+    // Only Seller or Admin can block / close conversations
+    if (role !== "admin" && conv.sellerId !== userId) {
+      return res.status(403).json({ error: "คุณไม่มีสิทธิ์ปรับสถานะการพูดคุยนี้" });
+    }
+
+    const { status } = req.body; // 'active' | 'closed' | 'blocked'
+    if (!["active", "closed", "blocked"].includes(status)) {
+      return res.status(400).json({ error: "สถานะไม่ถูกต้อง" });
+    }
+
+    conv.status = status;
+    saveDB(db);
+
+    broadcastChatEvent({ type: "conversation_status_updated", conversationId: conv.id, status });
+    res.json({ success: true, conversation: conv });
+  });
+
+  // GET User notifications
+  app.get("/api/chat/notifications", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบ" });
+
+    const notifs = db.notifications.filter((n: any) => n.userId === userId);
+    res.json(notifs);
+  });
+
+  // POST Mark single or all notifications as read
+  app.post("/api/chat/notifications/:id/read", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบ" });
+
+    const id = req.params.id;
+    if (id === "all") {
+      db.notifications.forEach((n: any) => {
+        if (n.userId === userId) n.isRead = true;
+      });
+    } else {
+      const notif = db.notifications.find((n: any) => n.id === id && n.userId === userId);
+      if (notif) notif.isRead = true;
+    }
+
+    saveDB(db);
+    res.json({ success: true });
+  });
+
+  // GET Admin stats for Chat Dashboard
+  app.get("/api/chat/admin/stats", (req, res) => {
+    const role = req.headers["x-user-role"] as string;
+    if (role !== "admin") return res.status(403).json({ error: "ผู้ดูแลระบบเท่านั้นที่เข้าถึงได้" });
+
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const msgsToday = db.messages.filter((m: any) => m.createdAt.startsWith(todayStr)).length;
+
+    // Calc most active shops
+    const shopCounts: Record<string, number> = {};
+    db.conversations.forEach((c: any) => {
+      shopCounts[c.sellerId] = (shopCounts[c.sellerId] || 0) + 1;
+    });
+
+    const topShops = Object.entries(shopCounts).map(([sellerId, count]) => {
+      const seller = db.users.find((u: any) => u.id === sellerId);
+      const verification = db.sellerVerifications.find((v: any) => v.userId === sellerId);
+      return {
+        sellerId,
+        shopName: verification?.shopName || seller?.username || "ร้านค้าชุมชน",
+        count
+      };
+    }).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    // Blocked/Reported list
+    const blockedCount = db.conversations.filter((c: any) => c.status === "blocked").length;
+
+    res.json({
+      totalRooms: db.conversations.length,
+      totalMessages: db.messages.length,
+      messagesToday: msgsToday,
+      blockedRooms: blockedCount,
+      topShops
+    });
+  });
+
+  // GET Admin view of all conversations & users for search / monitor
+  app.get("/api/chat/admin/all", (req, res) => {
+    const role = req.headers["x-user-role"] as string;
+    if (role !== "admin") return res.status(403).json({ error: "ผู้ดูแลระบบเท่านั้นที่เข้าถึงได้" });
+
+    const populated = db.conversations.map((c: any) => {
+      const customer = db.users.find((u: any) => u.id === c.customerId);
+      const seller = db.users.find((u: any) => u.id === c.sellerId);
+      const verification = db.sellerVerifications.find((v: any) => v.userId === c.sellerId);
+      const msgCount = db.messages.filter((m: any) => m.conversationId === c.id).length;
+
+      return {
+        ...c,
+        customerName: customer?.username || "ลูกค้าในระบบ",
+        customerEmail: customer?.email || "",
+        shopName: verification?.shopName || seller?.username || "ร้านค้า",
+        shopOwnerName: seller?.username || "",
+        messageCount: msgCount
+      };
+    });
+
+    res.json(populated);
+  });
+
+  // POST Admin moderate action (suspend/activate user or seller)
+  app.post("/api/chat/admin/moderate", (req, res) => {
+    const role = req.headers["x-user-role"] as string;
+    if (role !== "admin") return res.status(403).json({ error: "ผู้ดูแลระบบเท่านั้นที่เข้าถึงได้" });
+
+    const { targetUserId, action } = req.body; // action: 'suspend' | 'activate'
+    const target = db.users.find((u: any) => u.id === targetUserId);
+    if (!target) return res.status(404).json({ error: "ไม่พบผู้ใช้เป้าหมาย" });
+
+    if (action === "suspend") {
+      target.isSuspended = true; // Block login/activities
+      // Close all conversations involving them
+      db.conversations.forEach((c: any) => {
+        if (c.customerId === targetUserId || c.sellerId === targetUserId) {
+          c.status = "blocked";
+        }
+      });
+    } else if (action === "activate") {
+      target.isSuspended = false;
+    }
+
+    saveDB(db);
+    broadcastChatEvent({ type: "user_moderated", userId: targetUserId, action });
+    res.json({ success: true, user: target });
   });
 
   // --- VITE MIDDLEWARE ---

@@ -17,6 +17,7 @@ interface ProductDetailModalProps {
     shippingDetails?: { name: string; phone: string; address: string; zip: string; method: string; fee: number }
   ) => Promise<any>;
   lang?: Language;
+  onChatWithSeller?: (sellerId: string) => void;
 }
 
 export default function ProductDetailModal({
@@ -26,7 +27,8 @@ export default function ProductDetailModal({
   reviews,
   onClose,
   onPurchase,
-  lang = "th"
+  lang = "th",
+  onChatWithSeller
 }: ProductDetailModalProps) {
   const product = getTranslatedProduct(originalProduct, lang);
 
@@ -435,6 +437,20 @@ export default function ProductDetailModal({
                       <ShoppingCart size={15} />
                       <span>{isOutOfStock ? getTranslation(lang, "outOfStockBtn") : getTranslation(lang, "buyNowBtn")}</span>
                     </button>
+
+                    {onChatWithSeller && originalProduct.sellerId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onChatWithSeller(originalProduct.sellerId);
+                          onClose();
+                        }}
+                        className="p-3.5 rounded-2xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-200 cursor-pointer flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        title={lang === "th" ? "แชทกับร้านค้า" : "Chat with Shop"}
+                      >
+                        <MessageSquare size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
