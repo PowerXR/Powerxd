@@ -73,7 +73,7 @@ function ImageUploader({ label, value, onChange, placeholder }: ImageUploaderPro
       {label && <label className="block text-[11px] text-stone-400 font-semibold">{label}</label>}
       <div className="flex flex-col sm:flex-row gap-2">
         <input
-          type="url"
+          type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="flex-1 bg-stone-900 border border-white/10 rounded-xl p-2.5 text-white text-xs placeholder-stone-600 focus:outline-none focus:border-[#8E6D4E]/50 transition-colors"
