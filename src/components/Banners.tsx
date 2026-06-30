@@ -71,9 +71,9 @@ export default function Banners({ settings }: BannersProps) {
 
                 {/* Elegant Serif Headline */}
                 <h1 className="text-4xl sm:text-6xl font-serif text-white font-light leading-[1.12] tracking-tight">
-                  Authentic local <br className="hidden sm:inline" />
-                  craftsmanship, <br />
-                  <span className="italic font-normal text-[#E2C7A9]">rooted in tradition.</span>
+                  ชุมชนตำบลน้ำน้อย <br className="hidden sm:inline" />
+                  แหล่งรวมสินค้าชุมชน คุณภาพดี, <br />
+                  <span className="italic font-normal text-[#E2C7A9]">ของดีน้ำน้อย ส่งต่อความภูมิใจสู่ทุกบ้าน.</span>
                 </h1>
 
                 {/* Subtitle */}
