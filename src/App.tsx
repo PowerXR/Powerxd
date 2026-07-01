@@ -11,6 +11,7 @@ import AuthModal from "./components/AuthModal";
 import HistoryModal from "./components/HistoryModal";
 import SellerModal from "./components/SellerModal";
 import CommunityChat from "./components/CommunityChat";
+import ProfileModal from "./components/ProfileModal";
 import { MessageSquare } from "lucide-react";
 import NamNoiMap from "./components/NamNoiMap";
 import CartModal from "./components/CartModal";
@@ -48,6 +49,7 @@ export default function App() {
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [sellerModalOpen, setSellerModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [floatAnnouncementClosed, setFloatAnnouncementClosed] = useState(false);
@@ -858,6 +860,7 @@ export default function App() {
             onOpenChat={() => setChatOpen(true)}
             cartItemsCount={cartItems.length}
             onOpenCart={() => setCartOpen(true)}
+            onOpenProfile={() => setProfileModalOpen(true)}
           />
 
           {/* Banner Slider */}
@@ -1224,6 +1227,17 @@ export default function App() {
                 settings={settings}
                 onClose={() => setHistoryModalOpen(false)}
                 onAddReview={handleAddReview}
+                lang={lang}
+              />
+            )}
+
+            {/* 5.1. Edit Profile Modal */}
+            {profileModalOpen && user && (
+              <ProfileModal 
+                user={user}
+                settings={settings}
+                onClose={() => setProfileModalOpen(false)}
+                onUpdateUser={(updatedUser) => setUser(updatedUser)}
                 lang={lang}
               />
             )}

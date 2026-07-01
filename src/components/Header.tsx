@@ -20,6 +20,7 @@ interface HeaderProps {
   onOpenChat: () => void;
   cartItemsCount: number;
   onOpenCart: () => void;
+  onOpenProfile: () => void;
 }
 
 export default function Header({
@@ -37,7 +38,8 @@ export default function Header({
   setLang,
   onOpenChat,
   cartItemsCount,
-  onOpenCart
+  onOpenCart,
+  onOpenProfile
 }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -208,6 +210,14 @@ export default function Header({
                             {user.role === 'admin' ? getTranslation(lang, "adminRole") : getTranslation(lang, "memberRole")}
                           </p>
                         </div>
+
+                        <button 
+                          onClick={() => { setDropdownOpen(false); onOpenProfile(); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#8E6D4E] hover:bg-[#8E6D4E]/5 rounded-lg transition-colors text-left cursor-pointer"
+                        >
+                          <UserIcon size={14} />
+                          <span>{lang === "zh" ? "修改个人资料" : lang === "en" ? "Edit Profile" : "แก้ไขโปรไฟล์ส่วนตัว"}</span>
+                        </button>
                         
                         {user.role === 'admin' && (
                           <button 

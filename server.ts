@@ -681,6 +681,55 @@ async function startServer() {
     res.json(user);
   });
 
+  // Update Current User Profile (For all roles)
+  app.post("/api/users/profile/update", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) {
+      return res.status(401).json({ error: "กรุณาเข้าสู่ระบบก่อนทำรายการ" });
+    }
+
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) {
+      return res.status(404).json({ error: "ไม่พบข้อมูลผู้ใช้นี้ในระบบ" });
+    }
+
+    const { username, email, avatarUrl, currentPassword, newPassword } = req.body;
+
+    // Validate username uniqueness if changed
+    if (username && username.toLowerCase() !== user.username.toLowerCase()) {
+      const exists = db.users.find((u: any) => u.username.toLowerCase() === username.toLowerCase() && u.id !== userId);
+      if (exists) {
+        return res.status(400).json({ error: "ชื่อผู้ใช้นี้มีผู้ใช้งานแล้ว" });
+      }
+      user.username = username;
+    }
+
+    // Validate email uniqueness if changed
+    if (email && email.toLowerCase() !== user.email.toLowerCase()) {
+      const exists = db.users.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.id !== userId);
+      if (exists) {
+        return res.status(400).json({ error: "อีเมลนี้มีผู้ใช้งานแล้ว" });
+      }
+      user.email = email;
+    }
+
+    if (avatarUrl !== undefined) {
+      user.avatarUrl = avatarUrl;
+    }
+
+    // Handle Password Change
+    if (newPassword) {
+      // If user has an existing password, they must provide the correct current password
+      if (user.password && user.password !== currentPassword) {
+        return res.status(400).json({ error: "รหัสผ่านปัจจุบันไม่ถูกต้อง" });
+      }
+      user.password = newPassword;
+    }
+
+    saveDB(db);
+    res.json({ message: "อัปเดตโปรไฟล์สำเร็จ", user });
+  });
+
   // Buy Product or Roll Box API
   app.post("/api/products/:id/purchase", (req, res) => {
     const userId = req.headers["x-user-id"] as string;
