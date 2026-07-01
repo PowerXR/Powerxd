@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, Transaction, AppSettings, Review } from "../types";
-import { X, Calendar, DollarSign, Gift, Star, Clock, ShoppingBag, Eye, HeartHandshake, Truck, CheckCircle2 } from "lucide-react";
+import { X, Calendar, DollarSign, Gift, Star, Clock, ShoppingBag, Eye, HeartHandshake, Truck, CheckCircle2, Copy, Cpu, Key, ShieldCheck, AlertCircle, MapPin, Activity, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Language, getTranslation } from "../lib/translations";
 
@@ -21,6 +21,47 @@ export default function HistoryModal({
 }: HistoryModalProps) {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const getDigitalCode = (details: string) => {
+    if (!details) return "";
+    const parts = details.split(" - ");
+    if (parts.length > 1) {
+      let codePart = parts[1];
+      if (codePart.includes(" | ")) {
+        codePart = codePart.split(" | ")[0];
+      }
+      if (codePart.includes("ใช้โค้ด")) {
+        codePart = codePart.split("ใช้โค้ด")[0];
+      }
+      return codePart.trim();
+    }
+    return "";
+  };
+
+  const getDigitalUpdates = (txDateStr: string) => {
+    const dateObj = new Date(txDateStr);
+    const step1Date = new Date(dateObj.getTime());
+    const step2Date = new Date(dateObj.getTime() + 1500);
+    const step3Date = new Date(dateObj.getTime() + 3000);
+    
+    return [
+      {
+        status: "preparing",
+        date: step1Date.toISOString(),
+        note: lang === "zh" ? "资金安全检测通过，已存入智能数字托管（Digital Escrow）" : lang === "en" ? "Digital support verified and placed in community secure digital escrow." : "ตรวจสอบความปลอดภัยและยอดอุดหนุนกองทุนชุมชนสำเร็จ พักยอดในระบบ Escrow"
+      },
+      {
+        status: "shipped",
+        date: step2Date.toISOString(),
+        note: lang === "zh" ? "数字交货处理引擎成功分配并校验体验卡密密钥" : lang === "en" ? "Automatic dispatch system processed the license/voucher code." : "ระบบคำนวณและดึงรหัสใบแทนสิทธิ์หรือคีย์บริการระดับพรีเมียมเรียบร้อย"
+      },
+      {
+        status: "delivered",
+        date: step3Date.toISOString(),
+        note: lang === "zh" ? "发货成功，产品激活序列号已部署完毕" : lang === "en" ? "E-ticket license and product code successfully deployed. Ready to redeem!" : "จัดส่งใบอนุญาตการรับบริการและจัดส่งคีย์รับสิทธิ์เรียบร้อยแล้ว คัดลอกรหัสเข้าใช้ได้เลย"
+      }
+    ];
+  };
 
   // Custom alert & confirm dialog states for iframe environment
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -273,152 +314,246 @@ export default function HistoryModal({
                 </div>
 
                 {/* Gorgeous Package/Order Tracking Stepper */}
-                {tx.orderStatus && (
-                  <div className="mt-3 p-3 bg-stone-50 dark:bg-stone-900/40 rounded-xl border border-[#8E6D4E]/10 space-y-2.5">
-                    {/* Carrier & Tracking number with copy utility */}
-                    <div className="flex items-center justify-between border-b border-[#8E6D4E]/10 pb-2">
-                      <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-[#4E3B2C] dark:text-[#EAE3DA]">
-                        <Truck size={12} className="text-[#8E6D4E]" />
-                        <span>{lang === "zh" ? "物流运送状态:" : lang === "en" ? "Delivery Status:" : "สถานะการจัดส่งพัสดุ:"}</span>
-                        <span className={`px-2 py-0.5 rounded text-[9.5px] ${
-                          tx.orderStatus === 'preparing' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' :
-                          tx.orderStatus === 'shipped' ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' :
-                          tx.orderStatus === 'delivered' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
-                          'bg-red-500/10 text-red-600 border border-red-500/20'
-                        }`}>
-                          {getOrderStatusLabel(tx.orderStatus)}
-                        </span>
-                      </div>
-                      
-                      {tx.trackingNumber && (
-                        <div className="flex items-center gap-1.5 text-[10px]">
-                          <span className="text-stone-400">
-                            {lang === "zh" ? "单号" : lang === "en" ? "Tracking" : "เลขพัสดุ"} ({tx.trackingCarrier || "Flash Express"}):
+                {(tx.orderStatus || tx.type.startsWith("purchase_")) && (() => {
+                  const isPhysical = !!tx.shippingDetails;
+                  const orderStatus = tx.orderStatus || (isPhysical ? "preparing" : "delivered");
+                  const digitalCode = getDigitalCode(tx.details);
+
+                  const derivedUpdates = tx.statusUpdates && tx.statusUpdates.length > 0 
+                    ? tx.statusUpdates 
+                    : (isPhysical 
+                        ? [
+                            {
+                              status: "preparing",
+                              date: tx.date,
+                              note: lang === "zh" ? "订单支付成功，商家正在打包商品..." : lang === "en" ? "Payment verified. Artisan has received the order and is preparing shipping pack..." : "ชำระเงินสำเร็จ ร้านค้าได้รับคำสั่งซื้อและกำลังจัดเตรียมบรรจุหัตถกรรมพรีเมียมน้ำน้อย"
+                            }
+                          ]
+                        : getDigitalUpdates(tx.date)
+                      );
+
+                  const filteredUpdates = derivedUpdates.filter(update => {
+                    if (orderStatus === 'preparing') return update.status === 'preparing';
+                    if (orderStatus === 'shipped') return ['preparing', 'shipped'].includes(update.status || '');
+                    return true;
+                  });
+
+                  return (
+                    <div className="mt-3 p-4 bg-stone-50 dark:bg-[#1E1A17] rounded-2xl border border-[#8E6D4E]/15 space-y-3.5 shadow-xs">
+                      {/* Carrier & Tracking number with copy utility / Digital Status Badge */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#8E6D4E]/10 pb-2.5">
+                        <div className="flex items-center gap-2 text-[10.5px] font-extrabold text-[#4E3B2C] dark:text-[#EAE3DA]">
+                          {isPhysical ? (
+                            <Truck size={13} className="text-[#8E6D4E]" />
+                          ) : (
+                            <Cpu size={13} className="text-[#8E6D4E]" />
+                          )}
+                          <span className="tracking-wide">
+                            {isPhysical 
+                              ? (lang === "zh" ? "📦 实体邮寄追踪:" : lang === "en" ? "📦 Physical Shipping:" : "📦 การจัดส่งแบบพัสดุ:") 
+                              : (lang === "zh" ? "⚡ 虚拟数字交付:" : lang === "en" ? "⚡ Digital Delivery:" : "⚡ การจัดส่งแบบดิจิทัล:")}
                           </span>
-                          <span className="font-mono font-bold text-[#4E3B2C] dark:text-[#EAE3DA] select-all">{tx.trackingNumber}</span>
+                          <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold ${
+                            orderStatus === 'preparing' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' :
+                            orderStatus === 'shipped' ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' :
+                            orderStatus === 'delivered' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
+                            'bg-red-500/10 text-red-600 border border-red-500/20'
+                          }`}>
+                            {getOrderStatusLabel(orderStatus)}
+                          </span>
+                        </div>
+                        
+                        {isPhysical && tx.trackingNumber && (
+                          <div className="flex items-center gap-1.5 text-[10px]">
+                            <span className="text-stone-400">
+                              {lang === "zh" ? "单号" : lang === "en" ? "Tracking" : "เลขพัสดุ"} ({tx.trackingCarrier || "Flash Express"}):
+                            </span>
+                            <span className="font-mono font-bold text-[#4E3B2C] dark:text-[#EAE3DA] select-all bg-stone-100 dark:bg-stone-900 px-1.5 py-0.5 rounded">{tx.trackingNumber}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(tx.trackingNumber || "");
+                                setAlertDialog({
+                                  isOpen: true,
+                                  title: lang === "zh" ? "复制成功" : lang === "en" ? "Copied" : "คัดลอกสำเร็จ",
+                                  message: lang === "zh" ? "物流快递单号已成功复制到剪贴板！" : lang === "en" ? "Tracking number copied to clipboard!" : "คัดลอกเลขพัสดุเรียบร้อยแล้วค่ะ!",
+                                  type: "success"
+                                });
+                              }}
+                              className="p-1 bg-[#8E6D4E]/10 hover:bg-[#8E6D4E]/20 text-[#8E6D4E] rounded-md text-[8.5px] font-bold cursor-pointer transition-all active:scale-95 flex items-center gap-0.5"
+                            >
+                              <Copy size={9} />
+                              <span>{lang === "zh" ? "复制" : lang === "en" ? "Copy" : "คัดลอก"}</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stepper progress bar */}
+                      {orderStatus !== 'cancelled' && (
+                        <div className="py-1 px-1">
+                          <div className="flex items-center justify-between text-[9px] font-black text-stone-400 relative">
+                            {/* Progress Line */}
+                            <div className="absolute top-[9px] left-3 right-3 h-0.5 bg-stone-200 dark:bg-stone-800 -z-0" />
+                            <div 
+                              className="absolute top-[9px] left-3 h-0.5 bg-[#8E6D4E] transition-all duration-500 -z-0" 
+                              style={{
+                                width: orderStatus === 'preparing' ? '15%' :
+                                       orderStatus === 'shipped' ? '50%' : '100%'
+                              }}
+                            />
+
+                            {/* Step 1 */}
+                            <div className="flex flex-col items-center gap-1.5 z-10">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all ${
+                                ['preparing', 'shipped', 'delivered'].includes(orderStatus)
+                                  ? "bg-[#8E6D4E] text-white shadow-sm"
+                                  : "bg-stone-200 dark:bg-stone-800 text-stone-400"
+                              }`}>
+                                1
+                              </div>
+                              <span className={['preparing', 'shipped', 'delivered'].includes(orderStatus) ? "text-[#8E6D4E] font-bold" : ""}>
+                                {isPhysical 
+                                  ? (lang === "zh" ? "已下单" : lang === "en" ? "Ordered" : "รับออเดอร์")
+                                  : (lang === "zh" ? "已付款" : lang === "en" ? "Paid" : "ชำระเงิน")}
+                              </span>
+                            </div>
+
+                            {/* Step 2 */}
+                            <div className="flex flex-col items-center gap-1.5 z-10">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all ${
+                                ['shipped', 'delivered'].includes(orderStatus)
+                                  ? "bg-[#8E6D4E] text-white shadow-sm"
+                                  : orderStatus === 'preparing'
+                                  ? "bg-amber-500 text-white font-bold animate-pulse shadow-sm shadow-amber-500/20"
+                                  : "bg-stone-200 dark:bg-stone-800 text-stone-400"
+                              }`}>
+                                2
+                              </div>
+                              <span className={['shipped', 'delivered'].includes(orderStatus) ? "text-[#8E6D4E] font-bold" : orderStatus === 'preparing' ? "text-amber-500 font-bold" : ""}>
+                                {isPhysical 
+                                  ? (lang === "zh" ? "备货中" : lang === "en" ? "Processing" : "เตรียมของ")
+                                  : (lang === "zh" ? "处理中" : lang === "en" ? "Processing" : "จัดสรรคีย์")}
+                              </span>
+                            </div>
+
+                            {/* Step 3 */}
+                            <div className="flex flex-col items-center gap-1.5 z-10">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all ${
+                                orderStatus === 'delivered'
+                                  ? "bg-[#8E6D4E] text-white shadow-sm"
+                                  : orderStatus === 'shipped'
+                                  ? "bg-blue-500 text-white font-bold animate-pulse shadow-sm shadow-blue-500/20"
+                                  : "bg-stone-200 dark:bg-stone-800 text-stone-400"
+                              }`}>
+                                3
+                              </div>
+                              <span className={orderStatus === 'shipped' ? "text-blue-500 font-bold animate-pulse" : orderStatus === 'delivered' ? "text-[#8E6D4E] font-bold" : ""}>
+                                {isPhysical 
+                                  ? (lang === "zh" ? "已发货" : lang === "en" ? "Shipped" : "จัดส่งพัสดุ")
+                                  : (lang === "zh" ? "已交付" : lang === "en" ? "Dispatched" : "ส่งมอบรหัส")}
+                              </span>
+                            </div>
+
+                            {/* Step 4 */}
+                            <div className="flex flex-col items-center gap-1.5 z-10">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all ${
+                                orderStatus === 'delivered'
+                                  ? "bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-500/20"
+                                  : "bg-stone-200 dark:bg-stone-800 text-stone-400"
+                              }`}>
+                                ✓
+                              </div>
+                              <span className={orderStatus === 'delivered' ? "text-emerald-600 font-bold" : ""}>
+                                {isPhysical 
+                                  ? (lang === "zh" ? "已签收" : lang === "en" ? "Delivered" : "สำเร็จแล้ว")
+                                  : (lang === "zh" ? "已激活" : lang === "en" ? "Secured" : "พร้อมใช้งาน")}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Digital Key Box if applicable */}
+                      {!isPhysical && digitalCode && (
+                        <div className="p-3 bg-amber-500/5 dark:bg-[#2A231D] rounded-xl border border-dashed border-[#8E6D4E]/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner">
+                          <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto">
+                            <div className="p-2 rounded-lg bg-[#8E6D4E]/10 text-[#8E6D4E] flex-shrink-0">
+                              <Key size={14} className="animate-pulse" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[8.5px] uppercase tracking-wider text-stone-400 font-extrabold block">
+                                {lang === "zh" ? "提取密匙 / 虚拟卡密" : lang === "en" ? "Dispatched Code / Voucher Key" : "รหัสคูปอง / คีย์ผลิตภัณฑ์จัดส่งสำเร็จ"}
+                              </span>
+                              <p className="text-xs font-mono font-extrabold text-[#8E6D4E] dark:text-amber-400 truncate select-all">{digitalCode}</p>
+                            </div>
+                          </div>
                           <button
                             type="button"
                             onClick={() => {
-                              navigator.clipboard.writeText(tx.trackingNumber || "");
+                              navigator.clipboard.writeText(digitalCode);
                               setAlertDialog({
                                 isOpen: true,
-                                title: lang === "zh" ? "复制成功" : lang === "en" ? "Copied" : "คัดลอกสำเร็จ",
-                                message: lang === "zh" ? "物流快递单号已成功复制到剪贴板！" : lang === "en" ? "Tracking number copied to clipboard!" : "คัดลอกเลขพัสดุเรียบร้อยแล้วค่ะ!",
+                                title: lang === "zh" ? "复制凭证成功" : lang === "en" ? "Voucher Copied" : "คัดลอกสำเร็จ",
+                                message: lang === "zh" ? "虚拟商品提货密码已存入剪贴板！" : lang === "en" ? "Digital code voucher key copied to clipboard!" : "คัดลอกรหัสเข้ารับสิทธิ์เรียบร้อยแล้วค่ะ!",
                                 type: "success"
                               });
                             }}
-                            className="p-0.5 px-1.5 bg-[#8E6D4E]/10 hover:bg-[#8E6D4E]/20 text-[#8E6D4E] rounded text-[8.5px] font-bold cursor-pointer transition-all"
+                            className="w-full sm:w-auto px-3.5 py-1.5 bg-[#8E6D4E] hover:bg-[#725437] text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all shadow-md shadow-[#8E6D4E]/10 active:scale-95 flex-shrink-0"
                           >
-                            {lang === "zh" ? "复制" : lang === "en" ? "Copy" : "คัดลอก"}
+                            <Copy size={11} />
+                            <span>{lang === "zh" ? "一键复制" : lang === "en" ? "Copy Key" : "คัดลอกรหัส"}</span>
                           </button>
                         </div>
                       )}
+
+                      {/* Physical Address Info */}
+                      {isPhysical && tx.shippingDetails && (
+                        <div className="p-3 bg-stone-100/50 dark:bg-stone-900/40 rounded-xl border border-[#8E6D4E]/5 text-[10.5px] space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-[#4E3B2C] dark:text-[#EAE3DA]">
+                            <MapPin size={11} className="text-[#8E6D4E]" />
+                            <span>{lang === "zh" ? "收货寄送地址:" : lang === "en" ? "Shipping Address:" : "ที่อยู่จัดส่งพัสดุ:"}</span>
+                          </div>
+                          <div className="pl-4 text-stone-500 dark:text-stone-400 space-y-0.5 font-light">
+                            <p><span className="font-semibold text-stone-600 dark:text-stone-300">{tx.shippingDetails.name}</span> ({tx.shippingDetails.phone})</p>
+                            <p>{tx.shippingDetails.address}, {tx.shippingDetails.zip}</p>
+                            <p className="text-[9.5px] text-[#8E6D4E]/80 font-bold uppercase">{lang === "zh" ? "运送方案:" : lang === "en" ? "Method:" : "รูปแบบการขนส่ง:"} {tx.shippingDetails.method} (ค่าส่ง {tx.shippingDetails.fee} ฿)</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Timeline Updates */}
+                      {filteredUpdates.length > 0 && (
+                        <div className="border-t border-[#8E6D4E]/10 pt-2.5 space-y-1.5">
+                          <div className="flex items-center gap-1">
+                            <Activity size={10} className="text-[#8E6D4E] animate-pulse" />
+                            <span className="text-[8.5px] font-extrabold uppercase tracking-wider text-stone-400 block">
+                              {lang === "zh" ? "实时订单状态日志 (Real-time Logs):" : lang === "en" ? "Real-time Progress Timeline:" : "บันทึกสถานะการทำรายการล่าสุด (Real-time Logs):"}
+                            </span>
+                          </div>
+                          <div className="space-y-2 max-h-24 overflow-y-auto pr-1">
+                            {filteredUpdates.map((update: any, idx: number) => (
+                              <div key={idx} className="flex gap-2 text-[9.5px] leading-relaxed">
+                                <span className="text-stone-450 dark:text-stone-500 font-mono flex-shrink-0 font-semibold">
+                                  {new Date(update.date).toLocaleString(lang === "zh" ? "zh-CN" : lang === "en" ? "en-US" : "th-TH", {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit"
+                                  })}
+                                </span>
+                                <span className="text-[#4E3B2C] dark:text-stone-300 font-medium">
+                                  - {update.note}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Stepper progress bar */}
-                    {tx.orderStatus !== 'cancelled' && (
-                      <div className="py-2.5 px-1">
-                        <div className="flex items-center justify-between text-[9px] font-black text-stone-400 relative">
-                          {/* Progress Line */}
-                          <div className="absolute top-[9px] left-3 right-3 h-0.5 bg-stone-200 dark:bg-stone-850 -z-0" />
-                          <div 
-                            className="absolute top-[9px] left-3 h-0.5 bg-[#8E6D4E] transition-all duration-500 -z-0" 
-                            style={{
-                              width: tx.orderStatus === 'preparing' ? '15%' :
-                                     tx.orderStatus === 'shipped' ? '50%' : '100%'
-                            }}
-                          />
-
-                          {/* Step 1 */}
-                          <div className="flex flex-col items-center gap-1.5 z-10">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                              ['preparing', 'shipped', 'delivered'].includes(tx.orderStatus)
-                                ? "bg-[#8E6D4E] text-white"
-                                : "bg-stone-200 dark:bg-stone-850 text-stone-400"
-                            }`}>
-                              1
-                            </div>
-                            <span className={['preparing', 'shipped', 'delivered'].includes(tx.orderStatus) ? "text-[#8E6D4E] font-bold" : ""}>
-                              {lang === "zh" ? "已接单" : lang === "en" ? "Ordered" : "รับออเดอร์"}
-                            </span>
-                          </div>
-
-                          {/* Step 2 */}
-                          <div className="flex flex-col items-center gap-1.5 z-10">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                              ['shipped', 'delivered'].includes(tx.orderStatus)
-                                ? "bg-[#8E6D4E] text-white"
-                                : tx.orderStatus === 'preparing'
-                                ? "bg-amber-500/25 border border-amber-500 text-amber-600 font-bold animate-pulse"
-                                : "bg-stone-200 dark:bg-stone-850 text-stone-400"
-                            }`}>
-                              2
-                            </div>
-                            <span className={['shipped', 'delivered'].includes(tx.orderStatus) ? "text-[#8E6D4E] font-bold" : ""}>
-                              {lang === "zh" ? "备货中" : lang === "en" ? "Processing" : "เตรียมของ"}
-                            </span>
-                          </div>
-
-                          {/* Step 3 */}
-                          <div className="flex flex-col items-center gap-1.5 z-10">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                              tx.orderStatus === 'delivered'
-                                ? "bg-[#8E6D4E] text-white"
-                                : tx.orderStatus === 'shipped'
-                                ? "bg-blue-500/25 border border-blue-500 text-blue-600 font-bold animate-pulse"
-                                : "bg-stone-200 dark:bg-stone-850 text-stone-400"
-                            }`}>
-                              3
-                            </div>
-                            <span className={tx.orderStatus === 'shipped' ? "text-blue-600 font-bold" : tx.orderStatus === 'delivered' ? "text-[#8E6D4E] font-bold" : ""}>
-                              {lang === "zh" ? "已发货" : lang === "en" ? "Shipped" : "จัดส่งพัสดุ"}
-                            </span>
-                          </div>
-
-                          {/* Step 4 */}
-                          <div className="flex flex-col items-center gap-1.5 z-10">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                              tx.orderStatus === 'delivered'
-                                ? "bg-emerald-600 text-white font-bold"
-                                : "bg-stone-200 dark:bg-stone-850 text-stone-400"
-                            }`}>
-                              ✓
-                            </div>
-                            <span className={tx.orderStatus === 'delivered' ? "text-emerald-600 font-bold" : ""}>
-                              {lang === "zh" ? "已签收" : lang === "en" ? "Delivered" : "สำเร็จแล้ว"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Timeline Updates */}
-                    {tx.statusUpdates && tx.statusUpdates.length > 0 && (
-                      <div className="border-t border-[#8E6D4E]/10 pt-2 space-y-1.5">
-                        <span className="text-[8.5px] font-bold uppercase tracking-wider text-stone-400 block">
-                          {lang === "zh" ? "物流实时轨迹详情 (Status Timeline):" : lang === "en" ? "Detailed Tracking Timeline:" : "ประวัติการเดินทางของพัสดุ (Status Timeline):"}
-                        </span>
-                        <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
-                          {tx.statusUpdates.map((update: any, idx: number) => (
-                            <div key={idx} className="flex gap-2 text-[9.5px] leading-relaxed">
-                              <span className="text-stone-450 dark:text-stone-500 font-mono flex-shrink-0">
-                                {new Date(update.date).toLocaleString(lang === "zh" ? "zh-CN" : lang === "en" ? "en-US" : "th-TH", {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit"
-                                })}
-                              </span>
-                              <span className="text-[#4E3B2C] dark:text-stone-300 font-medium">
-                                - {update.note}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Actions: Write review if is purchase */}
                 {tx.type.startsWith("purchase_") && (

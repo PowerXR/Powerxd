@@ -2952,6 +2952,101 @@ export default function AdminPanel({
                       </div>
                     </div>
                   )}
+
+                  {/* LUXURY PRODUCT RECOMMENDATION SLIDER CONFIGURATION */}
+                  <div className="col-span-2 border-t border-white/5 pt-4 mt-2">
+                    <span className="text-[11px] font-bold text-amber-400 block mb-2 uppercase tracking-wide">🌟 ระบบแดชบอร์ดแนะนำสินค้าหรูหราหน้าเว็บ (Luxury Recommended Slider Dashboard)</span>
+                    <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 space-y-4">
+                      
+                      <div className="flex items-center justify-between bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-slate-300 block">เปิดใช้งานสไลเดอร์สินค้าแนะนำ (Enable Recommendation Slider)</label>
+                          <span className="text-[9px] text-slate-500">แสดงแผงสไลเดอร์เลื่อนหรูหราบริเวณเหนือหัวข้อหมวดหมู่สินค้าในหน้าแรก</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={!!editedSettings.recommendActive} 
+                            onChange={e => setEditedSettings({...editedSettings, recommendActive: e.target.checked})} 
+                            className="sr-only peer" 
+                          />
+                          <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                        </label>
+                      </div>
+
+                      {editedSettings.recommendActive && (
+                        <div className="space-y-3 animate-fadeIn">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block mb-1 text-[10px] text-slate-400">หัวข้อบอร์ดแนะนำภาษาไทย (Slider Title - Thai) *</label>
+                              <input 
+                                type="text" 
+                                required 
+                                value={editedSettings.recommendTitle || "🌟 สินค้าแนะนำพิเศษ"} 
+                                onChange={e => setEditedSettings({...editedSettings, recommendTitle: e.target.value})} 
+                                className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white" 
+                                placeholder="เช่น 🌟 สินค้าแนะนำพิเศษ"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[10px] text-slate-400">คำอธิบายใต้หัวข้อ (Slider Subtitle - Thai) *</label>
+                              <input 
+                                type="text" 
+                                required 
+                                value={editedSettings.recommendSubtitle || "คัดสรรสุดยอดหัตถศิลป์ระดับพรีเมียมของชุมชนน้ำน้อยที่ได้รับความนิยมสูง"} 
+                                onChange={e => setEditedSettings({...editedSettings, recommendSubtitle: e.target.value})} 
+                                className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white" 
+                                placeholder="เช่น คัดสรรสุดยอดหัตถศิลป์ระดับพรีเมียมของชุมชน..."
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] text-slate-400 font-bold mb-1.5">🎯 เลือกสินค้าที่ต้องการแนะนำ (คลิกเพื่อเลือก/ยกเลิกนำขึ้นสไลเดอร์แนะนำสินค้า):</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+                              {products.map((prod) => {
+                                const currentRecs = editedSettings.recommendProductIds || [];
+                                const isSelected = currentRecs.includes(prod.id);
+                                return (
+                                  <div 
+                                    key={prod.id} 
+                                    onClick={() => {
+                                      let nextRecs = [...currentRecs];
+                                      if (isSelected) {
+                                        nextRecs = nextRecs.filter(id => id !== prod.id);
+                                      } else {
+                                        nextRecs.push(prod.id);
+                                      }
+                                      setEditedSettings({...editedSettings, recommendProductIds: nextRecs});
+                                    }}
+                                    className={`flex items-center gap-2.5 p-2 rounded-xl border cursor-pointer select-none transition-all ${
+                                      isSelected 
+                                        ? "bg-amber-500/10 border-amber-500/40 text-white" 
+                                        : "bg-slate-950/40 border-white/5 text-slate-400 hover:border-white/10 hover:bg-slate-900/40"
+                                    }`}
+                                  >
+                                    <input 
+                                      type="checkbox" 
+                                      checked={isSelected}
+                                      onChange={() => {}} // Controlled by outer card tap
+                                      className="rounded bg-slate-950 border-white/10 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900" 
+                                    />
+                                    <img src={prod.imageUrl} alt={prod.name} className="w-8 h-8 object-cover rounded bg-stone-900 flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-[10px] font-bold text-slate-200 truncate">{prod.name}</div>
+                                      <div className="text-[9px] text-[#8E6D4E] font-medium">{prod.price} ฿</div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <span className="text-[9px] text-stone-500 block mt-1.5">มีทั้งหมด {products.length} รายการ | แนะนำสินค้าไปแล้ว {(editedSettings.recommendProductIds || []).length} รายการ</span>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2">

@@ -14,6 +14,7 @@ import CommunityChat from "./components/CommunityChat";
 import { MessageSquare } from "lucide-react";
 import NamNoiMap from "./components/NamNoiMap";
 import CartModal from "./components/CartModal";
+import RecommendedSlider from "./components/RecommendedSlider";
 
 
 // Icons
@@ -908,6 +909,19 @@ export default function App() {
                 </div>
               </motion.div>
             </section>
+          )}
+
+          {/* Luxury Recommended Product Slider / Dashboard */}
+          {settings && settings.recommendActive && (
+            <RecommendedSlider
+              products={products}
+              recommendProductIds={settings.recommendProductIds || []}
+              lang={lang}
+              onSelectProduct={(p) => setSelectedProduct(p)}
+              onAddToCart={handleAddToCart}
+              recommendTitle={settings.recommendTitle}
+              recommendSubtitle={settings.recommendSubtitle}
+            />
           )}
 
           {/* Main Grid Categories And Product listing */}

@@ -64,6 +64,10 @@ export interface AppSettings {
     imageUrl: string;
   }[];
   landmarks?: Landmark[];
+  recommendActive?: boolean;
+  recommendTitle?: string;
+  recommendSubtitle?: string;
+  recommendProductIds?: string[];
 }
 
 export interface Category {
