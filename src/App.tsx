@@ -13,6 +13,7 @@ import SellerModal from "./components/SellerModal";
 import CommunityChat from "./components/CommunityChat";
 import { MessageSquare } from "lucide-react";
 import NamNoiMap from "./components/NamNoiMap";
+import CartModal from "./components/CartModal";
 
 
 // Icons
@@ -58,6 +59,21 @@ export default function App() {
   const [chatOpen, setChatOpen] = useState(false);
   const [activeChatSellerId, setActiveChatSellerId] = useState<string | null>(null);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  // Shopping Cart States
+  const [cartItems, setCartItems] = useState<{ productId: string; quantity: number }[]>(() => {
+    try {
+      const stored = localStorage.getItem("cart_items");
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [cartOpen, setCartOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("cart_items", JSON.stringify(cartItems));
+  }, [cartItems]);
 
   // Real-time live purchase notifications state
   const [livePurchases, setLivePurchases] = useState<any[]>([]);
@@ -308,9 +324,29 @@ export default function App() {
 
   const handleToggleTheme = () => {
     const next = themeMode === "dark" ? "light" : "dark";
-    setThemeMode(next);
-    localStorage.setItem("theme", next);
-    document.documentElement.className = next;
+    
+    // Add temporary transitioning class for smooth CSS transitions on all child elements
+    document.documentElement.classList.add("theme-transitioning");
+
+    const updateTheme = () => {
+      setThemeMode(next);
+      localStorage.setItem("theme", next);
+      document.documentElement.classList.remove("dark", "light");
+      document.documentElement.classList.add(next);
+    };
+
+    if ((document as any).startViewTransition) {
+      (document as any).startViewTransition(() => {
+        updateTheme();
+      });
+    } else {
+      updateTheme();
+    }
+
+    // Clean up temporary transitioning class after transition finishes
+    setTimeout(() => {
+      document.documentElement.classList.remove("theme-transitioning");
+    }, 500);
   };
 
   const handleLoginSuccess = (loggedInUser: User) => {
@@ -340,6 +376,130 @@ export default function App() {
       getTranslation(lang, "logoutMsg"),
       "success"
     );
+  };
+
+  // Cart helper functions
+  const handleAddToCart = (productId: string, quantity: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const currentQuantityInCart = cartItems.find(it => it.productId === productId)?.quantity || 0;
+    const nextQuantity = currentQuantityInCart + quantity;
+
+    if (product.stock.length < nextQuantity) {
+      triggerSwal(
+        "ขออภัยค่ะ",
+        `สินค้า [${product.name}] ในสต็อกไม่เพียงพอ (คงเหลือ ${product.stock.length} ชิ้น)`,
+        "warning"
+      );
+      return;
+    }
+
+    setCartItems(prev => {
+      const existing = prev.find(it => it.productId === productId);
+      if (existing) {
+        return prev.map(it => it.productId === productId ? { ...it, quantity: nextQuantity } : it);
+      }
+      return [...prev, { productId, quantity }];
+    });
+
+    triggerSwal(
+      "หยิบใส่ตะกร้าสำเร็จ!",
+      `เพิ่ม [${product.name}] จำนวน ${quantity} ชิ้น ลงตะกร้าเรียบร้อยแล้วค่ะ`,
+      "success"
+    );
+  };
+
+  const handleUpdateCartQuantity = (productId: string, quantity: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    if (product.stock.length < quantity) {
+      triggerSwal(
+        "ขออภัยค่ะ",
+        `สินค้า [${product.name}] ในสต็อกมีเพียง ${product.stock.length} ชิ้นเท่านั้น`,
+        "warning"
+      );
+      return;
+    }
+
+    setCartItems(prev => {
+      if (quantity <= 0) {
+        return prev.filter(it => it.productId !== productId);
+      }
+      return prev.map(it => it.productId === productId ? { ...it, quantity } : it);
+    });
+  };
+
+  const handleRemoveFromCart = (productId: string) => {
+    setCartItems(prev => prev.filter(it => it.productId !== productId));
+  };
+
+  const handleCartCheckout = async (
+    shippingDetails: { name: string; phone: string; address: string; zip: string; method: string; fee: number },
+    couponCode: string
+  ): Promise<boolean> => {
+    if (!user) {
+      setAuthModalType("login");
+      setAuthModalOpen(true);
+      return false;
+    }
+    try {
+      const resp = await fetch("/api/cart/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Id": user.id
+        },
+        body: JSON.stringify({
+          items: cartItems,
+          shippingDetails,
+          couponCode
+        })
+      });
+
+      const text = await resp.text();
+      if (!text || text.trim().startsWith("<")) {
+        triggerSwal(
+          getTranslation(lang, "errorTitle"),
+          getTranslation(lang, "errorHtmlResp"),
+          "error"
+        );
+        return false;
+      }
+      const data = JSON.parse(text);
+
+      if (!resp.ok) {
+        triggerSwal(
+          "สั่งซื้อไม่สำเร็จ",
+          data.error || "เกิดข้อผิดพลาดระหว่างทำรายการสั่งซื้อสินค้า",
+          "error"
+        );
+        return false;
+      }
+
+      // Success! Update session, inventory and clear cart
+      refreshUserSession(user.id);
+      loadStoreData();
+      setCartItems([]);
+
+      triggerSwal(
+        data.title || "สั่งซื้อสำเร็จ!",
+        `ชำระเงินเรียบร้อยแล้วค่ะ ยอดชำระทั้งหมด ${data.paidAmount} ฿`,
+        "success",
+        data.data
+      );
+
+      return true;
+    } catch (e) {
+      console.error(e);
+      triggerSwal(
+        getTranslation(lang, "errorTitle"),
+        getTranslation(lang, "errorPost"),
+        "error"
+      );
+      return false;
+    }
   };
 
   // Simulated SweetAlert notifier
@@ -695,6 +855,8 @@ export default function App() {
             lang={lang}
             setLang={setLang}
             onOpenChat={() => setChatOpen(true)}
+            cartItemsCount={cartItems.length}
+            onOpenCart={() => setCartOpen(true)}
           />
 
           {/* Banner Slider */}
@@ -755,6 +917,7 @@ export default function App() {
             settings={settings}
             onSelectProduct={(p) => setSelectedProduct(p)}
             lang={lang}
+            onAddToCart={handleAddToCart}
           />
 
           {/* About Us Section */}
@@ -1022,6 +1185,7 @@ export default function App() {
                   setActiveChatSellerId(sellerId);
                   setChatOpen(true);
                 }}
+                onAddToCart={handleAddToCart}
               />
             )}
 
@@ -1049,6 +1213,24 @@ export default function App() {
                 lang={lang}
               />
             )}
+
+            {/* 5.2. Cart Slide-Over Drawer */}
+            <AnimatePresence>
+              {cartOpen && (
+                <CartModal 
+                  isOpen={cartOpen}
+                  onClose={() => setCartOpen(false)}
+                  cartItems={cartItems}
+                  products={products}
+                  user={user}
+                  lang={lang}
+                  onUpdateQuantity={handleUpdateCartQuantity}
+                  onRemoveItem={handleRemoveFromCart}
+                  onCheckout={handleCartCheckout}
+                  onOpenAuth={(type) => { setAuthModalType(type); setAuthModalOpen(true); }}
+                />
+              )}
+            </AnimatePresence>
 
             {/* 5.5. Seller Registration & Dashboard Hub */}
             {sellerModalOpen && settings && (

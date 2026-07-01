@@ -806,6 +806,150 @@ async function startServer() {
     });
   });
 
+  // Cart Checkout API for Multi-Product Purchases
+  app.post("/api/cart/checkout", (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    const { items, shippingDetails, couponCode } = req.body;
+
+    const userIndex = db.users.findIndex((u: any) => u.id === userId);
+    if (userIndex === -1) {
+      return res.status(403).json({ error: "กรุณาเข้าสู่ระบบก่อนทำรายการ" });
+    }
+    const user = db.users[userIndex];
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "ไม่มีสินค้าในตะกร้าเพื่อทำการสั่งซื้อ" });
+    }
+
+    // Validate all products in the cart first
+    const validatedItems: { product: any; quantity: number }[] = [];
+    let subtotal = 0;
+
+    for (const cartItem of items) {
+      const prodIndex = db.products.findIndex((p: any) => p.id === cartItem.productId);
+      if (prodIndex === -1) {
+        return res.status(404).json({ error: `ไม่พบสินค้าที่มีรหัส ${cartItem.productId} ในระบบ` });
+      }
+      const product = db.products[prodIndex];
+      const quantity = Number(cartItem.quantity) || 1;
+
+      if (product.stock.length < quantity) {
+        return res.status(400).json({ error: `สินค้า [${product.name}] มีสินค้าคงเหลือไม่เพียงพอ (คงเหลือ ${product.stock.length} ชิ้น)` });
+      }
+
+      validatedItems.push({ product, quantity });
+      subtotal += product.price * quantity;
+    }
+
+    // Apply Coupon if exists
+    let priceToPay = subtotal;
+    let couponDetails = "";
+    if (couponCode) {
+      const coupon = db.coupons.find((c: any) => c.code.toLowerCase() === couponCode.trim().toLowerCase() && c.usesLeft > 0);
+      if (coupon) {
+        if (coupon.discountPercent > 0) {
+          const discount = parseFloat((subtotal * (coupon.discountPercent / 100)).toFixed(2));
+          priceToPay = Math.max(0, subtotal - discount);
+          couponDetails = `ใช้โค้ด ${coupon.code} (ลด ${coupon.discountPercent}%)`;
+        } else if (coupon.discountBaht > 0) {
+          priceToPay = Math.max(0, subtotal - coupon.discountBaht);
+          couponDetails = `ใช้โค้ด ${coupon.code} (ลด ${coupon.discountBaht} บาท)`;
+        }
+        // Deduct coupon uses
+        coupon.usesLeft -= 1;
+      }
+    }
+
+    // Shipping fee from request
+    let shippingFee = 0;
+    let shippingDetailsText = "";
+    if (shippingDetails && shippingDetails.name) {
+      shippingFee = shippingDetails.fee !== undefined ? Number(shippingDetails.fee) : 45;
+      shippingDetailsText = ` | จัดส่งถึงคุณ: ${shippingDetails.name} โทร. ${shippingDetails.phone} ที่อยู่: ${shippingDetails.address}, ${shippingDetails.zip} (${shippingDetails.method} ค่าส่ง ${shippingFee}฿)`;
+    }
+
+    const totalToPay = parseFloat((priceToPay + shippingFee).toFixed(2));
+
+    if (user.balance < totalToPay) {
+      return res.status(400).json({ error: "ยอดเงินคงเหลือของคุณไม่เพียงพอสำหรับค่าสินค้าในตะกร้าและค่าจัดส่ง กรุณาเติมเงินก่อนทำรายการค่ะ" });
+    }
+
+    // Deduct user balance
+    user.balance = parseFloat((user.balance - totalToPay).toFixed(2));
+
+    // Process each item
+    const purchasedSummary: string[] = [];
+    const rewardsList: string[] = [];
+
+    for (const { product, quantity } of validatedItems) {
+      product.timesSold += quantity;
+
+      const itemRewards: string[] = [];
+      for (let i = 0; i < quantity; i++) {
+        itemRewards.push(product.stock.shift() || "No detail");
+      }
+
+      const itemSubtotal = product.price * quantity;
+      
+      // Credit seller's pendingBalance
+      if (product.sellerId) {
+        const seller = db.users.find((u: any) => u.id === product.sellerId);
+        if (seller) {
+          if (seller.pendingBalance === undefined) seller.pendingBalance = 0;
+          seller.pendingBalance = parseFloat((seller.pendingBalance + itemSubtotal).toFixed(2));
+        }
+      }
+
+      purchasedSummary.push(`${product.name} (x${quantity})`);
+      rewardsList.push(`${product.name} [x${quantity}]: ${itemRewards.join(", ")}`);
+    }
+
+    const hasShipping = shippingDetails && shippingDetails.name;
+
+    const newTx: any = {
+      id: "tx-" + Date.now(),
+      userId: user.id,
+      username: user.username,
+      type: "purchase_product",
+      amount: totalToPay,
+      details: `ซื้อสินค้าจากตะกร้า: ${purchasedSummary.join(", ")} - รายละเอียดสินค้า: ${rewardsList.join(" | ")} ${couponDetails}${shippingDetailsText}`,
+      status: "success",
+      date: new Date().toISOString(),
+      isSellerCredited: false,
+      ...(hasShipping ? {
+        shippingDetails: shippingDetails,
+        orderStatus: "preparing",
+        trackingNumber: "",
+        trackingCarrier: "",
+        statusUpdates: [
+          {
+            status: "preparing",
+            date: new Date().toISOString(),
+            note: "ร้านค้าได้รับคำสั่งซื้อจากตะกร้าสินค้าเรียบร้อยแล้ว และกำลังเตรียมจัดส่งพัสดุของคุณ"
+          }
+        ]
+      } : {})
+    };
+
+    db.transactions.unshift(newTx);
+    saveDB(db);
+
+    try {
+      broadcastPurchase(newTx);
+    } catch (e) {
+      console.error("Error broadcasting purchase event:", e);
+    }
+
+    res.json({
+      success: true,
+      title: "สั่งซื้อสินค้าจากตะกร้าสำเร็จ!",
+      purchasedProducts: purchasedSummary,
+      paidAmount: totalToPay,
+      newBalance: user.balance,
+      data: rewardsList.join("\n")
+    });
+  });
+
   // Verify TrueMoney Wallet Angpao API
   app.post("/api/payments/verify-angpao", (req, res) => {
     return res.status(400).json({ error: "ช่องทางการเติมเงินแบบอั่งเปาถูกยกเลิกแล้วค่ะ กรุณาโอนเงินผ่านบัญชีธนาคารเท่านั้น" });

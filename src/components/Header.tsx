@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Coins, Sun, Moon, LogOut, Settings, LayoutDashboard, UserPlus, LogIn, Menu, X, Compass, Palette, User as UserIcon, Globe, MessageSquare } from "lucide-react";
+import { Coins, Sun, Moon, LogOut, Settings, LayoutDashboard, UserPlus, LogIn, Menu, X, Compass, Palette, User as UserIcon, Globe, MessageSquare, ShoppingCart } from "lucide-react";
 import { User, AppSettings } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { Language, getTranslation } from "../lib/translations";
@@ -18,6 +18,8 @@ interface HeaderProps {
   lang: Language;
   setLang: (lang: Language) => void;
   onOpenChat: () => void;
+  cartItemsCount: number;
+  onOpenCart: () => void;
 }
 
 export default function Header({
@@ -33,7 +35,9 @@ export default function Header({
   onLogout,
   lang,
   setLang,
-  onOpenChat
+  onOpenChat,
+  cartItemsCount,
+  onOpenCart
 }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -139,6 +143,20 @@ export default function Header({
             title={theme === "dark" ? "หน้าจอโหมดสว่าง" : "หน้าจอโหมดมืด"}
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          {/* Shopping Cart Button */}
+          <button
+            onClick={onOpenCart}
+            className="relative p-2 rounded-xl text-[#735A45] hover:text-[#8E6D4E] hover:bg-[#8E6D4E]/5 dark:text-[#C5B49E] dark:hover:text-[#FAF7F2] transition-colors cursor-pointer"
+            title="ตะกร้าสินค้า (Shopping Cart)"
+          >
+            <ShoppingCart size={18} />
+            {cartItemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white font-sans text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-pulse">
+                {cartItemsCount}
+              </span>
+            )}
           </button>
 
           {user ? (
@@ -278,6 +296,12 @@ export default function Header({
             <a href="#portfolios-section" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "portfolios")}</a>
             <a href="#artisans-section" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "artisans")}</a>
             <a href="#recommended-products" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "products")}</a>
+            <button 
+              onClick={() => { setMobileMenuOpen(false); onOpenCart(); }} 
+              className="block w-full py-1.5 text-left hover:text-[#8E6D4E] cursor-pointer flex items-center justify-between"
+            >
+              <span>🛒 ตะกร้าสินค้า ({cartItemsCount})</span>
+            </button>
             <button 
               onClick={() => { setMobileMenuOpen(false); onOpenTopup(); }} 
               className="block w-full py-1.5 text-left hover:text-[#8E6D4E] cursor-pointer"

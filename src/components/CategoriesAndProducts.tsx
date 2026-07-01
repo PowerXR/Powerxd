@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Category, Product, AppSettings } from "../types";
 import LucideIcon from "./LucideIcon";
-import { Search, Flame, Sparkles, Layers, ChevronRight, CornerDownRight, Landmark, Palette, User, Heart } from "lucide-react";
+import { Search, Flame, Sparkles, Layers, ChevronRight, CornerDownRight, Landmark, Palette, User, Heart, ShoppingCart } from "lucide-react";
 import { motion } from "motion/react";
 import { Language, getTranslation, getTranslatedCategory, getTranslatedProduct } from "../lib/translations";
 
@@ -11,6 +11,7 @@ interface CategoriesAndProductsProps {
   settings: AppSettings;
   onSelectProduct: (product: Product) => void;
   lang?: Language;
+  onAddToCart?: (productId: string, quantity: number) => void;
 }
 
 export default function CategoriesAndProducts({
@@ -18,7 +19,8 @@ export default function CategoriesAndProducts({
   products,
   settings,
   onSelectProduct,
-  lang = "th"
+  lang = "th",
+  onAddToCart
 }: CategoriesAndProductsProps) {
   const translatedCategories = categories.map(cat => getTranslatedCategory(cat, lang));
   const translatedProducts = products.map(prod => getTranslatedProduct(prod, lang));
@@ -357,13 +359,27 @@ export default function CategoriesAndProducts({
                       </span>
                     </div>
 
-                    <button
-                      onClick={() => onSelectProduct(prod)}
-                      className="px-4.5 py-2.5 rounded-xl text-xs font-bold bg-[#8E6D4E] hover:bg-[#725437] text-white transition-all flex items-center gap-1 cursor-pointer shadow-md shadow-[#8E6D4E]/5 active:scale-95 hover:scale-[1.02]"
-                    >
-                      <span>{getTranslation(lang, "viewDetailsBtn")}</span>
-                      <ChevronRight size={13} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onAddToCart) onAddToCart(prod.id, 1);
+                        }}
+                        disabled={isOutOfStock}
+                        className="p-2.5 rounded-xl bg-[#8E6D4E]/10 hover:bg-[#8E6D4E]/20 text-[#8E6D4E] transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 active:scale-95 hover:scale-[1.02]"
+                        title="หยิบใส่ตะกร้า (Add to Cart)"
+                      >
+                        <ShoppingCart size={14} />
+                      </button>
+
+                      <button
+                        onClick={() => onSelectProduct(prod)}
+                        className="px-4.5 py-2.5 rounded-xl text-xs font-bold bg-[#8E6D4E] hover:bg-[#725437] text-white transition-all flex items-center gap-1 cursor-pointer shadow-md shadow-[#8E6D4E]/5 active:scale-95 hover:scale-[1.02]"
+                      >
+                        <span>{getTranslation(lang, "viewDetailsBtn")}</span>
+                        <ChevronRight size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>

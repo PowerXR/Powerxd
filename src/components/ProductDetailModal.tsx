@@ -18,6 +18,7 @@ interface ProductDetailModalProps {
   ) => Promise<any>;
   lang?: Language;
   onChatWithSeller?: (sellerId: string) => void;
+  onAddToCart?: (productId: string, quantity: number) => void;
 }
 
 export default function ProductDetailModal({
@@ -28,7 +29,8 @@ export default function ProductDetailModal({
   onClose,
   onPurchase,
   lang = "th",
-  onChatWithSeller
+  onChatWithSeller,
+  onAddToCart
 }: ProductDetailModalProps) {
   const product = getTranslatedProduct(originalProduct, lang);
 
@@ -427,6 +429,20 @@ export default function ProductDetailModal({
                       </div>
                     )}
 
+                    {onAddToCart && !isOutOfStock && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onAddToCart(originalProduct.id, quantity);
+                          onClose();
+                        }}
+                        className="px-6 py-3.5 rounded-2xl text-xs font-bold border border-[#8E6D4E]/50 hover:bg-[#8E6D4E]/10 text-[#8E6D4E] dark:text-[#E2C7A9] transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <ShoppingCart size={15} />
+                        <span>หยิบใส่ตะกร้า</span>
+                      </button>
+                    )}
+
                     <button
                       type="submit"
                       disabled={isOutOfStock || purchaseLoading}
@@ -434,7 +450,7 @@ export default function ProductDetailModal({
                         isOutOfStock ? "bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed" : themeButton
                       }`}
                     >
-                      <ShoppingCart size={15} />
+                      <Feather size={15} />
                       <span>{isOutOfStock ? getTranslation(lang, "outOfStockBtn") : getTranslation(lang, "buyNowBtn")}</span>
                     </button>
 
