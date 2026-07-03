@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, CSSProperties } from "react";
 import { AppSettings, Category, Product, User, Coupon, Transaction, Review } from "./types";
 import { Language, getTranslation } from "./lib/translations";
 import Header from "./components/Header";
@@ -16,6 +16,7 @@ import { MessageSquare } from "lucide-react";
 import NamNoiMap from "./components/NamNoiMap";
 import CartModal from "./components/CartModal";
 import RecommendedSlider from "./components/RecommendedSlider";
+import SeasonalEffects from "./components/SeasonalEffects";
 
 
 // Icons
@@ -733,6 +734,21 @@ export default function App() {
           animation-play-state: paused;
         }
 
+        /* Single Message Luxurious Marquee */
+        @keyframes marquee-single {
+          0% { left: 100%; transform: translateX(0%); }
+          100% { left: 0%; transform: translateX(-100%); }
+        }
+        .animate-marquee-single {
+          position: absolute;
+          white-space: nowrap;
+          will-change: left, transform;
+          animation: marquee-single 25s linear infinite;
+        }
+        .animate-marquee-single:hover {
+          animation-play-state: paused;
+        }
+
         /* Slow decorative animation pulse */
         @keyframes pulse-slow {
           0%, 100% { opacity: 0.35; transform: scale(1); }
@@ -796,24 +812,73 @@ export default function App() {
       {settings && (
         <>
           {/* Top Persistent Announcement Marquee Bar */}
-          {settings.announcementBarActive && settings.announcementBarText && (
-            <div 
-              style={{ 
+          {settings.announcementBarActive && settings.announcementBarText && (() => {
+            const barStyle = settings.announcementBarStyle || "solid";
+            
+            // Generate styles based on preset selection
+            let containerClasses = "w-full relative py-2.5 overflow-hidden z-30 shadow-md flex items-center select-none border-b transition-all duration-300";
+            let customStyle: React.CSSProperties = {};
+            let textStyle: React.CSSProperties = {};
+            let isNeon = false;
+
+            if (barStyle === "solid") {
+              containerClasses += " border-white/10";
+              customStyle = {
                 backgroundColor: settings.announcementBarBgColor || "#8E6D4E",
                 color: settings.announcementBarTextColor || "#FFFFFF"
-              }}
-              className="w-full relative py-2.5 overflow-hidden border-b border-white/10 z-30 shadow-md flex items-center select-none"
-            >
-              <div className="flex w-full overflow-hidden text-xs font-bold font-sans">
-                <div className="animate-marquee-loop gap-12 pr-12 flex">
-                  <span>{settings.announcementBarText}</span>
-                  <span>{settings.announcementBarText}</span>
-                  <span>{settings.announcementBarText}</span>
-                  <span>{settings.announcementBarText}</span>
+              };
+            } else if (barStyle === "gradient-gold") {
+              containerClasses += " bg-gradient-to-r from-[#1C1510] via-[#8E6D4E] to-[#1C1510] border-amber-500/20 shadow-[0_2px_15px_rgba(142,109,78,0.25)]";
+              textStyle = {
+                color: "#F6EDE2",
+                textShadow: "0 1px 4px rgba(0,0,0,0.5)"
+              };
+            } else if (barStyle === "neon-glow") {
+              containerClasses += " bg-[#070504] border-[#8E6D4E]/20 shadow-[0_2px_10px_rgba(142,109,78,0.15)]";
+              textStyle = {
+                color: settings.announcementBarBgColor || "#E2C7A9",
+                textShadow: `0 0 8px ${settings.announcementBarBgColor || "#8E6D4E"}`,
+                fontFamily: "monospace"
+              };
+              isNeon = true;
+            } else if (barStyle === "glassmorphism") {
+              containerClasses += " bg-white/5 dark:bg-black/30 backdrop-blur-md border-[#8E6D4E]/15 shadow-sm";
+              textStyle = {
+                color: settings.announcementBarTextColor || (settings.themeMode === 'dark' ? '#ECE5DD' : '#4E3B2C')
+              };
+            }
+
+            const prefixText = settings.announcementBarPrefix || "";
+
+            return (
+              <div className={containerClasses} style={customStyle}>
+                <div className="max-w-7xl mx-auto w-full px-4 flex items-center gap-4">
+                  {/* Static Left Tag Badge (Luxurious, doesn't scroll) */}
+                  {prefixText && (
+                    <div className="flex-shrink-0 z-10 px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/15 text-[9.5px] font-black uppercase tracking-widest text-[#EAE3DA] flex items-center gap-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.2)]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping-slow" />
+                      <span>{prefixText}</span>
+                    </div>
+                  )}
+
+                  {/* Infinite Marquee viewport */}
+                  <div className="flex-1 overflow-hidden relative flex items-center h-6">
+                    <div 
+                      className="animate-marquee-single flex items-center"
+                      style={{ 
+                        animationDuration: `${settings.announcementBarSpeed || 25}s`,
+                        ...textStyle
+                      }}
+                    >
+                      <span className="text-xs font-extrabold tracking-wide">
+                        {settings.announcementBarText}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Local Backup Recovery Banner for Admin */}
           {showLocalRestoreBanner && localBackupInfo && (
@@ -842,6 +907,9 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {/* Seasonal Festive Effects */}
+          <SeasonalEffects effect={settings.seasonalEffect} />
 
           {/* Header toolbar */}
           <Header 

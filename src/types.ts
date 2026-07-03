@@ -42,6 +42,9 @@ export interface AppSettings {
   announcementBarText?: string;
   announcementBarBgColor?: string;
   announcementBarTextColor?: string;
+  announcementBarSpeed?: number; // speed in seconds (duration of 1 complete marquee cycle)
+  announcementBarStyle?: 'solid' | 'gradient-gold' | 'neon-glow' | 'glassmorphism';
+  announcementBarPrefix?: string; // Static prefix tag text like "📢 ข่าวสาร" or "✨ SPECIAL"
   announcementFloatActive?: boolean;
   announcementFloatText?: string;
   announcementFloatStyle?: 'pastel-orange' | 'neon-cyan' | 'luxury-gold' | 'crimson-bold' | 'emerald-green';
@@ -68,6 +71,7 @@ export interface AppSettings {
   recommendTitle?: string;
   recommendSubtitle?: string;
   recommendProductIds?: string[];
+  seasonalEffect?: 'snow' | 'halloween' | 'valentine' | 'christmas' | 'songkran' | 'newyear' | 'none';
 }
 
 export interface Category {

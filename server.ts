@@ -127,11 +127,11 @@ function loadDB() {
             "imageUrl": "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=600&q=80"
           }
         ],
-        "recommendActive": true,
-        "recommendProductIds": [
-          "prod-1",
-          "prod-2"
-        ]
+        "seasonalEffect": "snow",
+        "announcementBarActive": true,
+        "announcementBarText": "เทส",
+        "announcementBarSpeed": 6,
+        "announcementBarStyle": "glassmorphism"
       } as AppSettings,
     categories: [
       { id: "cat-1", name: "สินค้าขายดี", description: "รหัสเกมและไอดีเกมพรีเมียม สต็อกพร้อมส่งทันที", icon: "TrendingUp", imageUrl: "" },

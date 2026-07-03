@@ -2644,6 +2644,45 @@ export default function AdminPanel({
                   )}
                 </div>
 
+                {/* SEASONAL EFFECTS CONFIGURATION BLOCK */}
+                <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-3">
+                  <div>
+                    <span className="text-[11px] font-bold text-teal-400 block uppercase tracking-wide">🎉 ระบบเอฟเฟกต์ตามเทศกาล (Seasonal Effects)</span>
+                    <span className="text-[9.5px] text-slate-400">เลือกเปิดใช้งานเอฟเฟกต์แอนิเมชันตกแต่งหน้าหลักตามช่วงเทศกาลเฉลิมฉลองต่างๆ (เลือกกดเปลี่ยนได้ทันทีเพียง 1 คลิก!)</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-1">
+                    {[
+                      { value: "none", label: "🚫 ปิด (None)", desc: "ไม่แสดงเอฟเฟกต์" },
+                      { value: "snow", label: "❄️ หิมะตก (Snow)", desc: "หิมะโปรยปรายละมุนตา" },
+                      { value: "halloween", label: "🎃 ฮาโลวีน", desc: "ฟักทองบินแสนซน" },
+                      { value: "valentine", label: "❤️ วาเลนไทน์", desc: "หัวใจลอยฟุ้งอบอุ่น" },
+                      { value: "christmas", label: "🎅 คริสต์มาส", desc: "กล่องของขวัญและหิมะ" },
+                      { value: "songkran", label: "💦 สงกรานต์", desc: "ละอองน้ำเย็นฉ่ฉ่ำ" },
+                      { value: "newyear", label: "🎆 ปีใหม่ (New Year)", desc: "ประกายไฟระยิบระยับ" }
+                    ].map((eff) => {
+                      const isActive = editedSettings.seasonalEffect === eff.value || (!editedSettings.seasonalEffect && eff.value === "none");
+                      return (
+                        <button
+                          key={eff.value}
+                          type="button"
+                          onClick={() => setEditedSettings({ ...editedSettings, seasonalEffect: eff.value as any })}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between h-[68px] ${
+                            isActive
+                              ? "border-[#8E6D4E] bg-[#8E6D4E]/10 text-white shadow-md"
+                              : "border-white/5 bg-slate-900 hover:bg-slate-800 text-slate-300"
+                          }`}
+                        >
+                          {isActive && (
+                            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#8E6D4E] animate-pulse" />
+                          )}
+                          <span className="text-[10px] font-bold block truncate">{eff.label}</span>
+                          <span className="text-[8px] text-slate-400 block leading-tight">{eff.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* WEBSITE BACKGROUND CONFIGURATION BLOCK */}
                 <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-3">
                   <div>
@@ -2728,54 +2767,126 @@ export default function AdminPanel({
                     </label>
                   </div>
 
-                  {editedSettings.announcementBarActive && (
+                   {editedSettings.announcementBarActive && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-                      <div className="md:col-span-2 space-y-3">
-                        <div>
-                          <label className="block mb-1 text-[10px] text-slate-400">ข้อความประกาศวิ่ง/ปกติ (Announcement Text) *</label>
-                          <input 
-                            type="text" 
-                            required={editedSettings.announcementBarActive} 
-                            value={editedSettings.announcementBarText || ""} 
-                            onChange={e => setEditedSettings({...editedSettings, announcementBarText: e.target.value})} 
-                            className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs" 
-                            placeholder="พิมพ์ข้อความที่ต้องการประกาศ เช่น ✨ ยินดีต้อนรับสู่เว็บหัตถศิลป์ตำบลน้ำน้อย..."
-                          />
+                      <div className="md:col-span-2 space-y-3.5">
+                        {/* Text and Prefix tag */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="sm:col-span-2">
+                            <label className="block mb-1 text-[10px] text-slate-400">ข้อความประกาศวิ่ง/ปกติ (Announcement Text) *</label>
+                            <input 
+                              type="text" 
+                              required={editedSettings.announcementBarActive} 
+                              value={editedSettings.announcementBarText || ""} 
+                              onChange={e => setEditedSettings({...editedSettings, announcementBarText: e.target.value})} 
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs" 
+                              placeholder="พิมพ์ข้อความที่ต้องการประกาศ เช่น ✨ ยินดีต้อนรับสู่เว็บหัตถศิลป์ตำบลน้ำน้อย..."
+                            />
+                          </div>
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400">🏷️ ป้ายคำนำหน้า (Static Tag)</label>
+                            <input 
+                              type="text" 
+                              value={editedSettings.announcementBarPrefix || ""} 
+                              onChange={e => setEditedSettings({...editedSettings, announcementBarPrefix: e.target.value})} 
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs" 
+                              placeholder="เช่น 📢 ประกาศ, ✨ SPECIAL"
+                            />
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        {/* Premium Style Presets */}
+                        <div className="space-y-1">
+                          <label className="block text-[10px] text-slate-400">👑 สไตล์แถบประกาศระดับพรีเมียม (Premium Style Presets)</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+                            {[
+                              { value: 'solid', label: "🎨 คลาสสิกสีปกติ", desc: "ใช้สีด้านล่างที่เราแต่งเอง" },
+                              { value: 'gradient-gold', label: "🏆 สีทองราชวงศ์", desc: "ไล่ระดับหรูประกายทอง" },
+                              { value: 'neon-glow', label: "⚡ นีออนเรืองแสง", desc: "สว่างล้ำสะกดสายตา" },
+                              { value: 'glassmorphism', label: "💎 กระจกฝ้าโมเดิร์น", desc: "เบลอหลังดูดีสไตล์โปร" }
+                            ].map((preset) => {
+                              const isSel = (editedSettings.announcementBarStyle || 'solid') === preset.value;
+                              return (
+                                <button
+                                  key={preset.value}
+                                  type="button"
+                                  onClick={() => setEditedSettings({ ...editedSettings, announcementBarStyle: preset.value as any })}
+                                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between h-[54px] ${
+                                    isSel
+                                      ? "border-[#8E6D4E] bg-[#8E6D4E]/10 text-white shadow-md"
+                                      : "border-white/5 bg-slate-900/60 hover:bg-slate-800 text-slate-300"
+                                  }`}
+                                >
+                                  <span className="text-[9.5px] font-bold block truncate">{preset.label}</span>
+                                  <span className="text-[8px] text-slate-400 block leading-tight">{preset.desc}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Speed range slider */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <label className="block text-[10px] text-slate-400">⏱️ ความเร็วในการเลื่อนข้อความ (Speed Duration: {editedSettings.announcementBarSpeed || 25} วินาที)</label>
+                            <span className="text-[9px] text-[#8E6D4E] font-bold font-mono">
+                              {(editedSettings.announcementBarSpeed || 25) <= 12 ? "⚡ เร็วสุด" : (editedSettings.announcementBarSpeed || 25) <= 22 ? "🚀 เร็ว" : (editedSettings.announcementBarSpeed || 25) <= 35 ? "✨ ปกติ" : (editedSettings.announcementBarSpeed || 25) <= 55 ? "🐢 ช้าพริ้ว" : "💤 ช้ามาก"}
+                            </span>
+                          </div>
+                          <div className="flex gap-3 items-center">
+                            <input 
+                              type="range" 
+                              min="6" 
+                              max="90" 
+                              value={editedSettings.announcementBarSpeed || 25} 
+                              onChange={e => setEditedSettings({...editedSettings, announcementBarSpeed: parseInt(e.target.value)})}
+                              className="flex-1 accent-[#8E6D4E] h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <span className="text-[10px] text-slate-300 font-mono w-8 text-right">{editedSettings.announcementBarSpeed || 25}s</span>
+                          </div>
+                          <p className="text-[8px] text-slate-500 leading-none mt-1">
+                            * ค่าน้อยจะเลื่อนเร็ว ค่ามากจะเลื่อนช้าลงอย่างหรูหรานุ่มนวลละมุนตา
+                          </p>
+                        </div>
+
+                        {/* Color inputs (only shown for solid or custom styling) */}
+                        <div className="grid grid-cols-2 gap-3 pt-0.5">
                           <div>
-                            <label className="block mb-1 text-[10px] text-slate-400">สีพื้นหลังของช่องประกาศ (Background Color)</label>
+                            <label className="block mb-1 text-[10px] text-slate-400">สีพื้นหลัง (Background Color - สำหรับสีปกติ)</label>
                             <div className="flex gap-1.5 items-center">
                               <input 
                                 type="color" 
                                 value={editedSettings.announcementBarBgColor || "#8E6D4E"} 
                                 onChange={e => setEditedSettings({...editedSettings, announcementBarBgColor: e.target.value})} 
                                 className="w-8 h-8 rounded border-0 bg-transparent cursor-pointer"
+                                disabled={(editedSettings.announcementBarStyle || 'solid') !== 'solid' && (editedSettings.announcementBarStyle || 'solid') !== 'neon-glow'}
                               />
                               <input 
                                 type="text" 
                                 value={editedSettings.announcementBarBgColor || "#8E6D4E"} 
                                 onChange={e => setEditedSettings({...editedSettings, announcementBarBgColor: e.target.value})} 
                                 className="flex-1 bg-slate-900 border border-white/10 rounded-lg p-1.5 text-white text-xs text-center font-mono"
+                                disabled={(editedSettings.announcementBarStyle || 'solid') !== 'solid' && (editedSettings.announcementBarStyle || 'solid') !== 'neon-glow'}
                               />
                             </div>
                           </div>
 
                           <div>
-                            <label className="block mb-1 text-[10px] text-slate-400">สีของตัวอักษรประกาศ (Text Color)</label>
+                            <label className="block mb-1 text-[10px] text-slate-400">สีของตัวอักษร (Text Color - สำหรับสีปกติ)</label>
                             <div className="flex gap-1.5 items-center">
                               <input 
                                 type="color" 
                                 value={editedSettings.announcementBarTextColor || "#FFFFFF"} 
                                 onChange={e => setEditedSettings({...editedSettings, announcementBarTextColor: e.target.value})} 
                                 className="w-8 h-8 rounded border-0 bg-transparent cursor-pointer"
+                                disabled={(editedSettings.announcementBarStyle || 'solid') !== 'solid' && (editedSettings.announcementBarStyle || 'solid') !== 'glassmorphism'}
                               />
                               <input 
                                 type="text" 
                                 value={editedSettings.announcementBarTextColor || "#FFFFFF"} 
                                 onChange={e => setEditedSettings({...editedSettings, announcementBarTextColor: e.target.value})} 
                                 className="flex-1 bg-slate-900 border border-white/10 rounded-lg p-1.5 text-white text-xs text-center font-mono"
+                                disabled={(editedSettings.announcementBarStyle || 'solid') !== 'solid' && (editedSettings.announcementBarStyle || 'solid') !== 'glassmorphism'}
                               />
                             </div>
                           </div>
@@ -2802,6 +2913,7 @@ export default function AdminPanel({
                                 })}
                                 className="px-2.5 py-1 rounded text-[8.5px] border border-white/5 font-semibold transition-all cursor-pointer"
                                 style={{ backgroundColor: themeColor.bg, color: themeColor.text }}
+                                disabled={(editedSettings.announcementBarStyle || 'solid') !== 'solid'}
                               >
                                 🌟 {themeColor.label}
                               </button>
@@ -2811,26 +2923,66 @@ export default function AdminPanel({
                       </div>
 
                       {/* Live preview for Marquee */}
-                      <div className="bg-slate-900/40 p-3 rounded-xl border border-dashed border-white/10 flex flex-col justify-between">
-                        <div className="space-y-2">
-                          <span className="text-[9px] font-bold text-teal-400 block uppercase tracking-wide">🔍 จำลองแถบประกาศจริง (Live Announcement Preview)</span>
-                          <div 
-                            className="w-full rounded-lg py-3 px-2 overflow-hidden border border-white/5 relative flex items-center justify-center font-serif text-center font-bold text-xs leading-none"
-                            style={{ 
-                              backgroundColor: editedSettings.announcementBarBgColor || "#8E6D4E", 
-                              color: editedSettings.announcementBarTextColor || "#FFFFFF" 
-                            }}
-                          >
-                            {/* Simple text simulator inside */}
-                            <span className="truncate max-w-xs block select-none">
-                              {editedSettings.announcementBarText || "ข้อความประกาศช่องคุณ..."}
-                            </span>
-                          </div>
-                          <p className="text-[9px] text-stone-400 leading-normal font-light">
-                            แถบนี้จะแสดงเป็นลูปเลื่อนไหลอัจฉริยะ (Marquee Loop) ตลอดเวลาด้านบนสุด เพื่อดึงดูดสายตาและเพิ่มความสวยงามอลังการ
-                          </p>
-                        </div>
-                        <span className="text-[9.5px] text-stone-500 block text-right">เปิดแสดงแบบถาวร ดึงดูดลูกค้าและสร้างความน่าเชื่อถือ</span>
+                      <div className="bg-slate-900/40 p-4 rounded-xl border border-dashed border-white/10 flex flex-col justify-between space-y-3">
+                        <span className="text-[9px] font-bold text-teal-400 block uppercase tracking-wide">🔍 จำลองแถบประกาศจริง (Live Announcement Preview)</span>
+                        
+                        {/* Simulation Bar */}
+                        {(() => {
+                          const barStyle = editedSettings.announcementBarStyle || "solid";
+                          let previewBg = "border border-white/5";
+                          let previewStyles: React.CSSProperties = {};
+                          let textStyleSim: React.CSSProperties = {};
+                          let isNeon = false;
+
+                          if (barStyle === "solid") {
+                            previewStyles = {
+                              backgroundColor: editedSettings.announcementBarBgColor || "#8E6D4E",
+                              color: editedSettings.announcementBarTextColor || "#FFFFFF"
+                            };
+                          } else if (barStyle === "gradient-gold") {
+                            previewBg += " bg-gradient-to-r from-[#1C1510] via-[#8E6D4E] to-[#1C1510] border-amber-500/20";
+                            textStyleSim = { color: "#F6EDE2", textShadow: "0 1px 4px rgba(0,0,0,0.5)" };
+                          } else if (barStyle === "neon-glow") {
+                            previewBg += " bg-[#070504] border-[#8E6D4E]/20";
+                            textStyleSim = { 
+                              color: editedSettings.announcementBarBgColor || "#E2C7A9", 
+                              textShadow: `0 0 6px ${editedSettings.announcementBarBgColor || "#8E6D4E"}` 
+                            };
+                            isNeon = true;
+                          } else if (barStyle === "glassmorphism") {
+                            previewBg += " bg-white/5 border-white/10 backdrop-blur-md";
+                            textStyleSim = { color: "#ECE5DD" };
+                          }
+
+                          return (
+                            <div 
+                              className={`w-full rounded-lg py-2.5 px-3 overflow-hidden relative flex items-center gap-2 font-sans font-bold text-[10px] leading-none ${previewBg}`}
+                              style={previewStyles}
+                            >
+                              {editedSettings.announcementBarPrefix && (
+                                <div className="flex-shrink-0 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/10 text-[7.5px] uppercase tracking-wider text-[#EAE3DA]">
+                                  {editedSettings.announcementBarPrefix}
+                                </div>
+                              )}
+                              <div className="flex-1 overflow-hidden relative h-4 flex items-center">
+                                <div 
+                                  className="animate-marquee-single flex"
+                                  style={{ 
+                                    animationDuration: `${editedSettings.announcementBarSpeed || 25}s`,
+                                    ...textStyleSim
+                                  }}
+                                >
+                                  <span>{editedSettings.announcementBarText || "ข้อความประกาศวิ่ง..."}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        
+                        <p className="text-[9px] text-stone-400 leading-normal font-light">
+                          แถบนี้จะแสดงเป็นลูปเลื่อนไหลต่อเนื่องไม่มีวันสิ้นสุด (Infinite Loop) และหยุดชั่วคราวเมื่อผู้ใช้นำเมาส์ไปชี้เพื่อความสะดวกในการอ่าน
+                        </p>
+                        <span className="text-[9.5px] text-stone-500 block text-right font-medium">✨ ปรับสปีดและความหรูหราได้ดั่งใจ</span>
                       </div>
                     </div>
                   )}
