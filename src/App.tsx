@@ -16,6 +16,7 @@ import { MessageSquare } from "lucide-react";
 import NamNoiMap from "./components/NamNoiMap";
 import CartModal from "./components/CartModal";
 import RecommendedSlider from "./components/RecommendedSlider";
+import RecentOrdersMarquee from "./components/RecentOrdersMarquee";
 import SeasonalEffects from "./components/SeasonalEffects";
 
 
@@ -981,6 +982,14 @@ export default function App() {
               </motion.div>
             </section>
           )}
+
+          {/* Recent Orders Ticker */}
+          <RecentOrdersMarquee
+            products={products}
+            lang={lang}
+            onSelectProduct={(p) => setSelectedProduct(p)}
+            settings={settings}
+          />
 
           {/* Luxury Recommended Product Slider / Dashboard */}
           {settings && settings.recommendActive && (

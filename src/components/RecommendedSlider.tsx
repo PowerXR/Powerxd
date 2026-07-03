@@ -121,8 +121,21 @@ export default function RecommendedSlider({
           <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAF7F2] dark:from-[#151210] to-transparent z-10 pointer-events-none transition-opacity duration-300" />
         )}
 
-        <div
+        <motion.div
           ref={scrollRef}
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.12,
+                delayChildren: 0.1
+              }
+            }
+          }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
           className="flex gap-6 overflow-x-auto pb-6 pt-1 px-1 scroll-smooth no-scrollbar select-none snap-x"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
@@ -131,9 +144,25 @@ export default function RecommendedSlider({
             const stockCount = prod.stock ? prod.stock.length : 0;
 
             return (
-              <div
+              <motion.div
                 key={prod.id}
-                className="w-[280px] sm:w-[320px] shrink-0 snap-start rounded-3xl bg-white dark:bg-[#1C1815] border border-[#8E6D4E]/10 shadow-lg shadow-[#8E6D4E]/5 hover:shadow-xl hover:shadow-[#8E6D4E]/10 transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:border-[#8E6D4E]/30"
+                variants={{
+                  hidden: { opacity: 0, y: 40, scale: 0.96 },
+                  visible: { 
+                    opacity: 1, 
+                    y: 0, 
+                    scale: 1,
+                    transition: { type: "spring", stiffness: 70, damping: 14 }
+                  }
+                }}
+                whileHover={{ 
+                  y: -10,
+                  scale: 1.015,
+                  boxShadow: "0 25px 50px -12px rgba(142, 109, 78, 0.22)",
+                  borderColor: "rgba(142, 109, 78, 0.45)"
+                }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className="w-[280px] sm:w-[320px] shrink-0 snap-start rounded-3xl bg-white dark:bg-[#1C1815] border border-[#8E6D4E]/10 shadow-lg shadow-[#8E6D4E]/5 transition-all duration-500 flex flex-col justify-between overflow-hidden group"
               >
                 {/* Image and Badges Header */}
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100 dark:bg-stone-900">
@@ -141,10 +170,10 @@ export default function RecommendedSlider({
                     src={prod.imageUrl}
                     alt={prod.name}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
                   />
                   {/* Stock and Seller badges */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                  <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
                     <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[#8E6D4E] text-white flex items-center gap-1 shadow-md">
                       <Flame size={10} className="text-yellow-300 animate-pulse" />
                       <span>RECOMMENDED</span>
@@ -157,7 +186,7 @@ export default function RecommendedSlider({
                   </div>
 
                   {/* Rating / Sales overlay badge */}
-                  <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-stone-950/70 backdrop-blur-sm text-yellow-400 text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                  <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-stone-950/70 backdrop-blur-sm text-yellow-400 text-[10px] font-bold flex items-center gap-1 shadow-sm z-10">
                     <Star size={11} fill="currentColor" />
                     <span>4.9</span>
                     <span className="text-white/60 font-light font-sans">|</span>
@@ -165,10 +194,10 @@ export default function RecommendedSlider({
                   </div>
 
                   {/* Dark hover layer with buttons */}
-                  <div className="absolute inset-0 bg-stone-950/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                  <div className="absolute inset-0 bg-stone-950/40 opacity-0 group-hover:opacity-100 transition-opacity duration-350 flex items-center justify-center gap-3 z-20">
                     <button
                       onClick={() => onSelectProduct(prod)}
-                      className="p-3 rounded-full bg-white hover:bg-[#8E6D4E] text-[#8E6D4E] hover:text-white transition-all duration-300 shadow-lg cursor-pointer transform translate-y-2 group-hover:translate-y-0"
+                      className="p-3 rounded-full bg-white hover:bg-[#8E6D4E] text-[#8E6D4E] hover:text-white transition-all duration-300 shadow-lg cursor-pointer transform translate-y-3 group-hover:translate-y-0"
                       title={getTranslation(lang, "viewDetails")}
                     >
                       <Eye size={18} />
@@ -176,7 +205,7 @@ export default function RecommendedSlider({
                     {!isOutOfStock && (
                       <button
                         onClick={() => onAddToCart(prod.id, 1)}
-                        className="p-3 rounded-full bg-[#8E6D4E] hover:bg-[#725437] text-white transition-all duration-300 shadow-lg cursor-pointer transform translate-y-2 group-hover:translate-y-0 delay-75"
+                        className="p-3 rounded-full bg-[#8E6D4E] hover:bg-[#725437] text-white transition-all duration-300 shadow-lg cursor-pointer transform translate-y-3 group-hover:translate-y-0 delay-75"
                         title="หยิบใส่ตะกร้า (Add to Cart)"
                       >
                         <ShoppingCart size={18} />
@@ -204,7 +233,7 @@ export default function RecommendedSlider({
                       )}
                     </div>
 
-                    <h3 className="text-xs sm:text-sm font-bold text-[#4E3B2C] dark:text-stone-100 line-clamp-1 group-hover:text-[#8E6D4E] transition-colors font-serif">
+                    <h3 className="text-xs sm:text-sm font-bold text-[#4E3B2C] dark:text-stone-100 line-clamp-1 group-hover:text-[#8E6D4E] transition-colors duration-300 font-serif">
                       {prod.name}
                     </h3>
                     <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 font-light line-clamp-2 leading-relaxed h-8">
@@ -223,17 +252,17 @@ export default function RecommendedSlider({
 
                     <button
                       onClick={() => onSelectProduct(prod)}
-                      className="px-3.5 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#8E6D4E]/10 text-[#8E6D4E] hover:bg-[#8E6D4E] hover:text-white transition-all duration-300 flex items-center gap-1 cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#8E6D4E]/10 text-[#8E6D4E] hover:bg-[#8E6D4E] hover:text-white transition-all duration-300 flex items-center gap-1 cursor-pointer transform group-hover:scale-105 active:scale-95"
                     >
                       <span>รายละเอียด</span>
-                      <ChevronRight size={12} />
+                      <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform duration-300" />
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

@@ -3204,6 +3204,65 @@ export default function AdminPanel({
 
                     </div>
                   </div>
+
+                  {/* RECENT ORDERS TICKER CONFIGURATION */}
+                  <div className="col-span-2 border-t border-white/5 pt-4 mt-2">
+                    <span className="text-[11px] font-bold text-violet-400 block mb-2 uppercase tracking-wide">🛒 ระบบแสดงรายการสั่งซื้อล่าสุดเลื่อนอัตโนมัติ (Live Recent Orders Ticker)</span>
+                    <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 space-y-4">
+                      
+                      <div className="flex items-center justify-between bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-slate-300 block">เปิดใช้งานระบบรายการสั่งซื้อล่าสุดเลื่อนไปเรื่อย ๆ (Enable Recent Orders Ticker)</label>
+                          <span className="text-[9px] text-slate-500">แสดงผลแถบรายการสั่งซื้อล่าสุดเคลื่อนไหวอัตโนมัติในสไตล์หรูหราที่หน้าแรก</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={!!editedSettings.recentOrdersActive} 
+                            onChange={e => setEditedSettings({...editedSettings, recentOrdersActive: e.target.checked})} 
+                            className="sr-only peer" 
+                          />
+                          <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-500"></div>
+                        </label>
+                      </div>
+
+                      {editedSettings.recentOrdersActive && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 animate-fadeIn">
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400">เลือกโทนสีและการตกแต่งกล่องสั่งซื้อ (Ticker Visual Theme Style)</label>
+                            <select 
+                              value={editedSettings.recentOrdersStyle || "violet-indigo"} 
+                              onChange={e => setEditedSettings({...editedSettings, recentOrdersStyle: e.target.value as any})} 
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs"
+                            >
+                              <option value="violet-indigo">👾 Violet & Indigo (นีออนม่วง-ครามหรูหรา)</option>
+                              <option value="sunset-orange">🌅 Sunset Orange (ส้มพระอาทิตย์อัสดง นำโชค)</option>
+                              <option value="emerald-green">🌿 Emerald Green (เขียวมรกตธรรมชาติ สดชื่น)</option>
+                              <option value="crimson-rose">💖 Crimson Rose (แดงระเรื่อชมพูโรส มีเสน่ห์)</option>
+                              <option value="luxury-gold">✨ Luxury Gold (ทองคำอร่ามหรูหรา ระดับพรีเมียม)</option>
+                              <option value="cyberpunk-neon">⚡ Cyberpunk Neon (แสงไซเบอร์พังก์ ล้ำสมัยสีสันจัดเต็ม)</option>
+                              <option value="glass-monochrome">💎 Glass Monochrome (กระจกใสโมโนโครม คลาสสิกร่วมสมัย)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400">ระดับความเร็วในการเลื่อนช่องประกาศ (Ticker Scroll Speed)</label>
+                            <select 
+                              value={editedSettings.recentOrdersSpeed || "normal"} 
+                              onChange={e => setEditedSettings({...editedSettings, recentOrdersSpeed: e.target.value as any})} 
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs"
+                            >
+                              <option value="slow">🐌 Slow (เลื่อนช้า - เน้นให้อ่านง่าย สบายตา)</option>
+                              <option value="normal">🚶 Normal (ความเร็วปกติ - พอดีเป็นธรรมชาติ)</option>
+                              <option value="fast">🏃 Fast (เลื่อนเร็ว - สตรีมสดคึกคักเห็นความถี่)</option>
+                              <option value="vfast">⚡ Very Fast (เลื่อนด่วนพิเศษ - ประกาศข่าวรวดเร็วเต็มพลัง)</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2">

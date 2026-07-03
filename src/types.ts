@@ -72,6 +72,9 @@ export interface AppSettings {
   recommendSubtitle?: string;
   recommendProductIds?: string[];
   seasonalEffect?: 'snow' | 'halloween' | 'valentine' | 'christmas' | 'songkran' | 'newyear' | 'none';
+  recentOrdersActive?: boolean;
+  recentOrdersStyle?: 'violet-indigo' | 'sunset-orange' | 'emerald-green' | 'crimson-rose' | 'luxury-gold' | 'cyberpunk-neon' | 'glass-monochrome';
+  recentOrdersSpeed?: 'slow' | 'normal' | 'fast' | 'vfast';
 }
 
 export interface Category {

@@ -131,7 +131,10 @@ function loadDB() {
         "announcementBarActive": true,
         "announcementBarText": "เทส",
         "announcementBarSpeed": 6,
-        "announcementBarStyle": "glassmorphism"
+        "announcementBarStyle": "glassmorphism",
+        "recentOrdersActive": true,
+        "recentOrdersStyle": "violet-indigo",
+        "recentOrdersSpeed": "normal"
       } as AppSettings,
     categories: [
       { id: "cat-1", name: "สินค้าขายดี", description: "รหัสเกมและไอดีเกมพรีเมียม สต็อกพร้อมส่งทันที", icon: "TrendingUp", imageUrl: "" },
@@ -293,6 +296,27 @@ async function startServer() {
       cleanDetails = cleanDetails.split(" - ")[0];
     }
 
+    // Try to find corresponding product in DB to get its imageUrl and id
+    let productId = tx.productId || "";
+    let imageUrl = "";
+    
+    if (!productId && cleanDetails) {
+      const match = cleanDetails.match(/\[(.*?)\]/);
+      if (match && match[1]) {
+        const productName = match[1];
+        const foundProd = db.products.find((p: any) => p.name === productName);
+        if (foundProd) {
+          productId = foundProd.id;
+          imageUrl = foundProd.imageUrl;
+        }
+      }
+    } else if (productId) {
+      const foundProd = db.products.find((p: any) => p.id === productId);
+      if (foundProd) {
+        imageUrl = foundProd.imageUrl;
+      }
+    }
+
     const payload = {
       id: tx.id,
       username: maskedUsername,
@@ -300,7 +324,9 @@ async function startServer() {
       amount: tx.amount,
       details: cleanDetails,
       date: tx.date,
-      status: tx.status
+      status: tx.status,
+      productId,
+      imageUrl
     };
 
     sseClients.forEach((client) => {
@@ -838,6 +864,7 @@ async function startServer() {
       id: "tx-" + Date.now(),
       userId: user.id,
       username: user.username,
+      productId: product.id,
       type: product.type === "box" ? "purchase_box" : "purchase_product",
       amount: totalToPay,
       details: `${product.type === "box" ? "สุ่มกล่อง" : "ซื้อสินค้าจัดส่ง"} [${product.name}] - ${rewardDetails} ${couponDetails}${shippingDetailsText}`,
@@ -1486,7 +1513,7 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
   // Get Recent Purchases (Publicly readable but sanitized to prevent credential leakage)
   app.get("/api/purchases/recent", (req, res) => {
     try {
-      const limit = Number(req.query.limit) || 10;
+      const limit = Number(req.query.limit) || 12;
       const purchases = db.transactions.filter((tx: any) => 
         tx.type === "purchase_product" || tx.type === "purchase_box" || (tx.type && tx.type.startsWith("purchase_"))
       );
@@ -1507,6 +1534,28 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
           cleanDetails = cleanDetails.split(" - ")[0];
         }
 
+        // Try to find the corresponding product in the DB to get its imageUrl and id
+        let productId = tx.productId || "";
+        let imageUrl = "";
+        
+        // Match bracketed product name like [Product Name] from details if productId not saved directly
+        if (!productId && cleanDetails) {
+          const match = cleanDetails.match(/\[(.*?)\]/);
+          if (match && match[1]) {
+            const productName = match[1];
+            const foundProd = db.products.find((p: any) => p.name === productName);
+            if (foundProd) {
+              productId = foundProd.id;
+              imageUrl = foundProd.imageUrl;
+            }
+          }
+        } else if (productId) {
+          const foundProd = db.products.find((p: any) => p.id === productId);
+          if (foundProd) {
+            imageUrl = foundProd.imageUrl;
+          }
+        }
+
         return {
           id: tx.id,
           username: maskedUsername,
@@ -1514,7 +1563,9 @@ Verify carefully and prevent mock/fake slips. Return JSON strictly matching the 
           amount: tx.amount,
           details: cleanDetails,
           date: tx.date,
-          status: tx.status
+          status: tx.status,
+          productId,
+          imageUrl
         };
       });
 
