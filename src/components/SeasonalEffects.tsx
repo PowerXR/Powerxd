@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface SeasonalEffectsProps {
-  effect: 'snow' | 'halloween' | 'valentine' | 'christmas' | 'songkran' | 'newyear' | 'none' | undefined;
+  effect: 'snow' | 'halloween' | 'valentine' | 'christmas' | 'songkran' | 'newyear' | 'goldenstar' | 'none' | undefined;
 }
 
 interface Particle {
@@ -46,6 +46,8 @@ export default function SeasonalEffects({ effect }: SeasonalEffectsProps) {
           return ["💦", "💧", "🫧", "🌊", "🔫"];
         case "newyear":
           return ["🎆", "🎇", "✨", "🎉", "🥳", "🌟", "🥂"];
+        case "goldenstar":
+          return ["✨", "⭐", "🌟", "💫", "✨"];
         default:
           return [];
       }
@@ -216,6 +218,35 @@ export default function SeasonalEffects({ effect }: SeasonalEffectsProps) {
           }
         };
 
+      case "goldenstar":
+        // Gold dust drifting slowly downwards and twinkling
+        return {
+          initial: { 
+            y: "-10vh", 
+            x: `${p.x}vw`, 
+            rotate: p.rotationStart, 
+            scale: p.scaleStart * 0.5,
+            opacity: 0 
+          },
+          animate: {
+            y: "110vh",
+            x: [
+              `${p.x}vw`, 
+              `${p.x + (p.id % 2 === 0 ? 5 : -5)}vw`, 
+              `${p.x}vw`
+            ],
+            rotate: p.rotationEnd,
+            scale: [p.scaleStart * 0.5, p.scaleEnd * 1.4, p.scaleStart * 0.3, p.scaleEnd * 1.3, p.scaleStart * 0.5],
+            opacity: [0, 0.95, 0.25, 1, 0.25, 0.95, 0]
+          },
+          transition: {
+            duration: p.duration * 1.3, // slow and elegant
+            repeat: Infinity,
+            delay: p.delay,
+            ease: "easeInOut"
+          }
+        };
+
       default:
         return {};
     }
@@ -230,7 +261,11 @@ export default function SeasonalEffects({ effect }: SeasonalEffectsProps) {
             style={{
               position: "absolute",
               fontSize: p.size,
-              filter: p.type === "snow" ? "drop-shadow(0 0 4px rgba(255,255,255,0.8))" : "drop-shadow(0 2px 4px rgba(0,0,0,0.15))"
+              filter: p.type === "snow" 
+                ? "drop-shadow(0 0 4px rgba(255,255,255,0.8))" 
+                : p.type === "goldenstar"
+                ? "drop-shadow(0 0 8px rgba(250,204,21,0.85))"
+                : "drop-shadow(0 2px 4px rgba(0,0,0,0.15))"
             }}
             {...getMotionProps(p)}
           >

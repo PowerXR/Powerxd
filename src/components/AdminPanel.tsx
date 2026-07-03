@@ -2655,7 +2655,7 @@ export default function AdminPanel({
                     <span className="text-[11px] font-bold text-teal-400 block uppercase tracking-wide">🎉 ระบบเอฟเฟกต์ตามเทศกาล (Seasonal Effects)</span>
                     <span className="text-[9.5px] text-slate-400">เลือกเปิดใช้งานเอฟเฟกต์แอนิเมชันตกแต่งหน้าหลักตามช่วงเทศกาลเฉลิมฉลองต่างๆ (เลือกกดเปลี่ยนได้ทันทีเพียง 1 คลิก!)</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 pt-1">
                     {[
                       { value: "none", label: "🚫 ปิด (None)", desc: "ไม่แสดงเอฟเฟกต์" },
                       { value: "snow", label: "❄️ หิมะตก (Snow)", desc: "หิมะโปรยปรายละมุนตา" },
@@ -2663,7 +2663,8 @@ export default function AdminPanel({
                       { value: "valentine", label: "❤️ วาเลนไทน์", desc: "หัวใจลอยฟุ้งอบอุ่น" },
                       { value: "christmas", label: "🎅 คริสต์มาส", desc: "กล่องของขวัญและหิมะ" },
                       { value: "songkran", label: "💦 สงกรานต์", desc: "ละอองน้ำเย็นฉ่ฉ่ำ" },
-                      { value: "newyear", label: "🎆 ปีใหม่ (New Year)", desc: "ประกายไฟระยิบระยับ" }
+                      { value: "newyear", label: "🎆 ปีใหม่ (New Year)", desc: "ประกายไฟระยิบระยับ" },
+                      { value: "goldenstar", label: "✨ ดาวระวิบวับทอง", desc: "ดาวสีทองหรูหราระยิบระยับ" }
                     ].map((eff) => {
                       const isActive = editedSettings.seasonalEffect === eff.value || (!editedSettings.seasonalEffect && eff.value === "none");
                       return (

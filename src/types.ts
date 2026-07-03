@@ -71,7 +71,7 @@ export interface AppSettings {
   recommendTitle?: string;
   recommendSubtitle?: string;
   recommendProductIds?: string[];
-  seasonalEffect?: 'snow' | 'halloween' | 'valentine' | 'christmas' | 'songkran' | 'newyear' | 'none';
+  seasonalEffect?: 'snow' | 'halloween' | 'valentine' | 'christmas' | 'songkran' | 'newyear' | 'goldenstar' | 'none';
   recentOrdersActive?: boolean;
   recentOrdersStyle?: 'violet-indigo' | 'sunset-orange' | 'emerald-green' | 'crimson-rose' | 'luxury-gold' | 'cyberpunk-neon' | 'glass-monochrome';
   recentOrdersSpeed?: 'slow' | 'normal' | 'fast' | 'vfast';
