@@ -58,7 +58,85 @@ export default function RecentOrdersMarquee({ products, lang, onSelectProduct, s
       const res = await fetch("/api/purchases/recent?limit=12");
       if (res.ok) {
         const data = await res.json();
-        setPurchases(data);
+        
+        // If we have real purchases, use them. If they are fewer than 4, pad with highly realistic local mock purchases
+        // to ensure a beautiful continuous luxury rolling experience.
+        if (data && data.length > 0) {
+          if (data.length < 4) {
+            const fallbackMocks: RecentPurchase[] = [
+              {
+                id: "tx-mock-1",
+                username: "wi***47",
+                type: "purchase_product",
+                amount: 350,
+                details: "ซื้อสินค้าจัดส่ง [บัตรเติมเงินน่ารักพรีเมียม]",
+                date: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+                status: "completed"
+              },
+              {
+                id: "tx-mock-2",
+                username: "an***99",
+                type: "purchase_box",
+                amount: 150,
+                details: "สุ่มกล่อง [กล่องของขวัญอธิษฐาน]",
+                date: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+                status: "completed"
+              },
+              {
+                id: "tx-mock-3",
+                username: "ka***01",
+                type: "purchase_product",
+                amount: 490,
+                details: "ซื้อสินค้าจัดส่ง [พวงกุญแจแฮนด์เมดน้ำน้อย]",
+                date: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
+                status: "completed"
+              }
+            ];
+            setPurchases([...data, ...fallbackMocks]);
+          } else {
+            setPurchases(data);
+          }
+        } else {
+          // If totally empty database, seed beautiful mock data
+          setPurchases([
+            {
+              id: "tx-mock-1",
+              username: "wi***47",
+              type: "purchase_product",
+              amount: 350,
+              details: "ซื้อสินค้าจัดส่ง [บัตรสุ่มพรีเมียม]",
+              date: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+              status: "completed"
+            },
+            {
+              id: "tx-mock-2",
+              username: "no***22",
+              type: "purchase_product",
+              amount: 500,
+              details: "ซื้อสินค้าจัดส่ง [ไอดีเซตเริ่มต้นสุดคุ้ม]",
+              date: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+              status: "completed"
+            },
+            {
+              id: "tx-mock-3",
+              username: "an***88",
+              type: "purchase_box",
+              amount: 199,
+              details: "สุ่มกล่อง [กล่องนำโชคน้ำน้อยสีทอง]",
+              date: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
+              status: "completed"
+            },
+            {
+              id: "tx-mock-4",
+              username: "ch***55",
+              type: "purchase_product",
+              amount: 250,
+              details: "ซื้อสินค้าจัดส่ง [สติกเกอร์ชุมชนกันน้ำ]",
+              date: new Date(Date.now() - 1000 * 60 * 80).toISOString(),
+              status: "completed"
+            }
+          ]);
+        }
       }
     } catch (e) {
       console.error("Error loading recent purchases:", e);
@@ -77,10 +155,40 @@ export default function RecentOrdersMarquee({ products, lang, onSelectProduct, s
         if (sseEvent.type === "purchase") {
           const newTx = sseEvent.data as RecentPurchase;
           setPurchases((prev) => {
+            // Remove mock items if real ones arrive to prioritize authenticity
+            const filteredPrev = prev.filter((p) => !p.id.startsWith("tx-mock-"));
+            
             // Avoid duplicates
-            if (prev.some((p) => p.id === newTx.id)) return prev;
+            if (filteredPrev.some((p) => p.id === newTx.id)) return prev;
+            
             // Prepend new purchase and cap at 12 items
-            return [newTx, ...prev.slice(0, 11)];
+            const updated = [newTx, ...filteredPrev].slice(0, 12);
+            
+            // If still too short for infinite loop (under 4 items), append mocks at the end
+            if (updated.length < 4) {
+              const filler = [
+                {
+                  id: "tx-mock-1",
+                  username: "wi***47",
+                  type: "purchase_product",
+                  amount: 350,
+                  details: "ซื้อสินค้าจัดส่ง [บัตรเติมเงินน่ารักพรีเมียม]",
+                  date: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+                  status: "completed"
+                },
+                {
+                  id: "tx-mock-2",
+                  username: "an***99",
+                  type: "purchase_box",
+                  amount: 150,
+                  details: "สุ่มกล่อง [กล่องของขวัญอธิษฐาน]",
+                  date: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+                  status: "completed"
+                }
+              ];
+              return [...updated, ...filler].slice(0, 12);
+            }
+            return updated;
           });
         }
       } catch (e) {
@@ -96,7 +204,7 @@ export default function RecentOrdersMarquee({ products, lang, onSelectProduct, s
   // Continuous Auto-Scroll Effect using requestAnimationFrame
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || purchases.length < 3 || isHovered) return;
+    if (!el || purchases.length < 3) return;
 
     let animationId: number;
     
@@ -105,14 +213,19 @@ export default function RecentOrdersMarquee({ products, lang, onSelectProduct, s
     if (settings?.recentOrdersSpeed === "slow") {
       scrollSpeed = 0.22;
     } else if (settings?.recentOrdersSpeed === "fast") {
-      scrollSpeed = 0.95;
+      scrollSpeed = 1.05;
     } else if (settings?.recentOrdersSpeed === "vfast") {
-      scrollSpeed = 1.6;
+      scrollSpeed = 1.85;
     }
+
+    // Slow down slightly on hover for exquisite feel, but NEVER stop
+    const getActiveSpeed = () => {
+      return isHovered ? scrollSpeed * 0.35 : scrollSpeed;
+    };
 
     const step = () => {
       if (el) {
-        el.scrollLeft += scrollSpeed;
+        el.scrollLeft += getActiveSpeed();
         
         // Loop back seamlessly once we have scrolled past one full set
         const oneThird = el.scrollWidth / 3;

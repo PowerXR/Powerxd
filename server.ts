@@ -127,13 +127,8 @@ function loadDB() {
             "imageUrl": "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=600&q=80"
           }
         ],
-        "seasonalEffect": "snow",
-        "announcementBarActive": true,
-        "announcementBarText": "เทส",
-        "announcementBarSpeed": 6,
-        "announcementBarStyle": "glassmorphism",
         "recentOrdersActive": true,
-        "recentOrdersStyle": "violet-indigo",
+        "recentOrdersStyle": "sunset-orange",
         "recentOrdersSpeed": "normal"
       } as AppSettings,
     categories: [
