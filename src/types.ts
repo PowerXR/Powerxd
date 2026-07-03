@@ -50,6 +50,11 @@ export interface AppSettings {
   announcementFloatStyle?: 'pastel-orange' | 'neon-cyan' | 'luxury-gold' | 'crimson-bold' | 'emerald-green';
   announcementFloatIcon?: 'broadcast' | 'welcome' | 'sale' | 'winner' | 'alert';
   announcementFloatPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  maintenanceActive?: boolean;
+  maintenanceTitle?: string;
+  maintenanceMessage?: string;
+  maintenanceEstimatedTime?: string;
+  maintenanceAutoOpenTime?: string; // ISO or YYYY-MM-DDTHH:MM datetime string when maintenance should automatically end
   aboutUsTitle?: string;
   aboutUsBody?: string;
   aboutUsImageUrl?: string;

@@ -3264,6 +3264,92 @@ export default function AdminPanel({
 
                     </div>
                   </div>
+
+                  {/* SITE MAINTENANCE CONFIGURATION */}
+                  <div className="col-span-2 border-t border-white/5 pt-4 mt-2">
+                    <span className="text-[11px] font-bold text-amber-500 block mb-2 uppercase tracking-wide">🔧 ระบบปรับปรุงเว็บไซต์ชั่วคราว (Site Maintenance Mode)</span>
+                    <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 space-y-4">
+                      
+                      <div className="flex items-center justify-between bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-slate-300 block">เปิดใช้งานโหมดปรับปรุงเว็บไซต์ (Enable Maintenance Mode)</label>
+                          <span className="text-[9px] text-slate-500">หากเปิดใช้งาน คนทั่วไปจะไม่สามารถเข้าถึงหน้าเว็บได้ ยกเว้นแอดมิน เพื่อความปลอดภัยในการอัปเดตระบบ</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={!!editedSettings.maintenanceActive} 
+                            onChange={e => setEditedSettings({...editedSettings, maintenanceActive: e.target.checked})} 
+                            className="sr-only peer" 
+                          />
+                          <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                        </label>
+                      </div>
+
+                      {editedSettings.maintenanceActive && (
+                        <div className="grid grid-cols-1 gap-3.5 animate-fadeIn">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            <div>
+                              <label className="block mb-1 text-[10px] text-slate-400">หัวข้อหน้าปรับปรุงระบบ (Maintenance Title)</label>
+                              <input 
+                                type="text"
+                                value={editedSettings.maintenanceTitle || ""}
+                                onChange={e => setEditedSettings({...editedSettings, maintenanceTitle: e.target.value})}
+                                className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white text-xs"
+                                placeholder="🔧 อยู่ระหว่างปรับปรุงระบบชั่วคราว..."
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[10px] text-slate-400">ระยะเวลาโดยประมาณ (Estimated Completion Time)</label>
+                              <input 
+                                type="text"
+                                value={editedSettings.maintenanceEstimatedTime || ""}
+                                onChange={e => setEditedSettings({...editedSettings, maintenanceEstimatedTime: e.target.value})}
+                                className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white text-xs"
+                                placeholder="ประมาณ 2 ชั่วโมง หรือ คาดว่าจะเสร็จเวลา 18:00 น."
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block mb-1 text-[10px] text-slate-400">รายละเอียดแจ้งลูกค้า (Maintenance Notification Message)</label>
+                            <textarea
+                              value={editedSettings.maintenanceMessage || ""}
+                              onChange={e => setEditedSettings({...editedSettings, maintenanceMessage: e.target.value})}
+                              className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white text-xs h-20 resize-none"
+                              placeholder="ระบุข้อความชี้แจงผู้ใช้งานขณะระบบปิดปรับปรุง..."
+                            />
+                          </div>
+
+                          <div className="bg-slate-950/40 p-3.5 rounded-xl border border-white/5 space-y-2">
+                            <label className="block text-[10.5px] font-bold text-amber-400 flex items-center gap-1.5">
+                              📅 ตั้งเวลาเปิดเว็บไซต์อัตโนมัติ (Auto-Open Scheduled Time)
+                            </label>
+                            <p className="text-[9px] text-slate-500">หากกำหนดค่าระบบจะตรวจสอบเมื่อผู้ใช้นำเข้าหน้าเว็บ หากถึงหรือเลยเวลาที่กำหนด โหมดปรับปรุงเว็บไซต์จะเปิดให้บริการโดยอัตโนมัติทันที</p>
+                            <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                              <input 
+                                type="datetime-local"
+                                value={editedSettings.maintenanceAutoOpenTime || ""}
+                                onChange={e => setEditedSettings({...editedSettings, maintenanceAutoOpenTime: e.target.value})}
+                                className="w-full sm:w-auto bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs font-mono select-none"
+                                style={{ colorScheme: 'dark' }}
+                              />
+                              {editedSettings.maintenanceAutoOpenTime && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditedSettings({...editedSettings, maintenanceAutoOpenTime: ""})}
+                                  className="text-[10px] text-red-400 hover:text-red-300 transition-colors underline cursor-pointer self-center sm:ml-2"
+                                >
+                                  ยกเลิกการตั้งเวลาเปิดอัตโนมัติ
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2">

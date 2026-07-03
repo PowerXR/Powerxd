@@ -9,6 +9,7 @@ import TopupModal from "./components/TopupModal";
 import AdminPanel from "./components/AdminPanel";
 import AuthModal from "./components/AuthModal";
 import HistoryModal from "./components/HistoryModal";
+import { MaintenanceCountdown } from "./components/MaintenanceCountdown";
 import SellerModal from "./components/SellerModal";
 import CommunityChat from "./components/CommunityChat";
 import ProfileModal from "./components/ProfileModal";
@@ -22,7 +23,7 @@ import SeasonalEffects from "./components/SeasonalEffects";
 
 // Icons
 import { 
-  Check, AlertCircle, AlertTriangle, ShieldCheck, Mail, Send, Disc, ExternalLink, Heart, ArrowUpRight, Copy, Code, LayoutDashboard, X
+  Check, AlertCircle, AlertTriangle, ShieldCheck, Mail, Send, Disc, ExternalLink, Heart, ArrowUpRight, Copy, Code, LayoutDashboard, X, Wrench, Clock, Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -812,7 +813,142 @@ export default function App() {
       
       {settings && (
         <>
-          {/* Top Persistent Announcement Marquee Bar */}
+          {settings.maintenanceActive && (!user || user.role !== "admin") ? (
+            <div className="min-h-screen w-full flex flex-col justify-between items-center px-4 py-12 relative overflow-hidden font-sans bg-[#0D0A08] text-[#FAF5EF]">
+              {/* Background ambient lights and gold particles */}
+              <div className="absolute top-1/4 left-1/4 w-[25rem] h-[25rem] rounded-full bg-radial from-[#D4AF37]/10 to-transparent pointer-events-none blur-3xl" />
+              <div className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] rounded-full bg-radial from-[#8E6D4E]/8 to-transparent pointer-events-none blur-3xl" />
+              
+              <div className="w-full max-w-2xl mx-auto flex-grow flex flex-col justify-center items-center text-center relative z-10 space-y-8 my-auto">
+                {/* Brand / Logo */}
+                <div className="flex flex-col items-center gap-2">
+                  {settings.siteLogoUrl ? (
+                    <img src={settings.siteLogoUrl} alt="Logo" className="h-16 w-auto object-contain mb-2 filter drop-shadow-[0_0_12px_rgba(212,175,55,0.3)]" />
+                  ) : (
+                    <div className="px-5 py-2 rounded-full border border-[#8E6D4E]/30 bg-[#8E6D4E]/10 backdrop-blur-md text-[#E2C7A9] font-serif font-bold text-lg tracking-wider shadow-lg shadow-black/30">
+                      {settings.siteName}
+                    </div>
+                  )}
+                </div>
+
+                {/* Main animated maintenance container */}
+                <div className="relative p-1 bg-gradient-to-b from-[#D4AF37]/30 via-[#8E6D4E]/15 to-transparent rounded-[2.5rem] shadow-2xl shadow-black/80 w-full">
+                  <div className="bg-[#14100E]/95 backdrop-blur-xl rounded-[2.4rem] p-8 sm:p-12 border border-white/5 space-y-6 text-center">
+                    
+                    {/* Golden luxury animated icon */}
+                    <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                      {/* Outer pulsing neon ring */}
+                      <div className="absolute inset-0 rounded-full border-2 border-dashed border-[#D4AF37]/40 animate-spin-slow" />
+                      <div className="absolute -inset-2 rounded-full border border-[#D4AF37]/10 animate-pulse" />
+                      
+                      {/* Inner gold icon container */}
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#D4AF37] to-[#AA7C11] p-0.5 shadow-lg shadow-yellow-500/15">
+                        <div className="w-full h-full rounded-[14px] bg-[#1A1310] flex items-center justify-center text-[#E2C7A9]">
+                          <Wrench size={30} className="animate-bounce" style={{ animationDuration: '3s' }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] tracking-widest uppercase font-black text-amber-500">
+                        ⚡ {lang === "th" ? "ปรับปรุงระบบชั่วคราว" : "UNDER MAINTENANCE"}
+                      </div>
+                      <h1 className="text-2xl sm:text-3xl font-serif font-black text-[#E2C7A9] tracking-tight leading-tight">
+                        {settings.maintenanceTitle || (lang === "th" ? "ขออภัย เว็บไซต์อยู่ระหว่างการปรับปรุงระบบ" : "We'll be back soon!")}
+                      </h1>
+                      <p className="text-xs sm:text-sm text-stone-400 font-light leading-relaxed max-w-md mx-auto whitespace-pre-wrap">
+                        {settings.maintenanceMessage || (lang === "th" ? "เพื่อยกระดับความเสถียรและความปลอดภัยสูงสุด ขณะนี้ทีมงานกำลังอยู่ระหว่างปรับปรุงเซิร์ฟเวอร์ชั่วคราว คาดว่าจะกลับมาออนไลน์โดยเร็วที่สุด" : "Our website is currently undergoing scheduled maintenance. We should be back shortly. Thank you for your patience.")}
+                      </p>
+                    </div>
+
+                    {/* Live countdown timer for automatic re-opening */}
+                    {settings.maintenanceAutoOpenTime && (
+                      <MaintenanceCountdown 
+                        targetTime={settings.maintenanceAutoOpenTime}
+                        lang={lang}
+                        onComplete={async () => {
+                          // Force a complete settings refresh immediately to open the site
+                          await loadStoreData();
+                        }}
+                      />
+                    )}
+
+                    {/* Estimated Time progress bar / visualization */}
+                    {settings.maintenanceEstimatedTime && (
+                      <div className="bg-black/40 p-4 sm:px-6 rounded-2xl border border-white/5 max-w-md mx-auto space-y-2">
+                        <div className="flex items-center justify-between text-[11px] text-stone-400 font-medium">
+                          <span className="flex items-center gap-1 text-amber-500">
+                            <Clock size={12} />
+                            {lang === "th" ? "ระยะเวลาโดยประมาณ" : "Estimated Time"}
+                          </span>
+                          <span className="font-bold text-[#E2C7A9]">{settings.maintenanceEstimatedTime}</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-stone-900 rounded-full overflow-hidden relative">
+                          <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full animate-pulse w-3/4" />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Social Media Support Channel buttons */}
+                    <div className="space-y-3 pt-2">
+                      <div className="text-[10px] uppercase tracking-wider text-stone-500 font-bold">
+                        {lang === "th" ? "ช่องทางการติดต่อช่วยเหลือ" : "Need assistance? Contact our support"}
+                      </div>
+                      <div className="flex flex-wrap items-center justify-center gap-2 max-w-xs mx-auto">
+                        {settings.contactFacebook && (
+                          <a 
+                            href={settings.contactFacebook}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 text-[11px] font-bold transition-all hover:scale-105 active:scale-95"
+                          >
+                            <span>Facebook</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        )}
+                        {settings.contactDiscord && (
+                          <a 
+                            href={settings.contactDiscord}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 text-[11px] font-bold transition-all hover:scale-105 active:scale-95"
+                          >
+                            <span>Discord</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        )}
+                        {settings.contactLine && (
+                          <a 
+                            href={settings.contactLine}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold transition-all hover:scale-105 active:scale-95"
+                          >
+                            <span>Line Support</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              {/* Secure Admin Gate Login Button at bottom */}
+              <div className="w-full text-center relative z-10 pt-6">
+                <button 
+                  onClick={() => { setAuthModalType("login"); setAuthModalOpen(true); }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-stone-400 hover:text-white border border-white/5 hover:border-white/10 text-[10.5px] font-medium transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  <Settings size={12} className="text-amber-500 animate-spin-slow" />
+                  <span>{lang === "th" ? "ผู้ดูแลระบบคลิกที่นี่เพื่อเข้าสู่ระบบ" : "Administrator Portal Login"}</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Top Persistent Announcement Marquee Bar */}
           {settings.announcementBarActive && settings.announcementBarText && (() => {
             const barStyle = settings.announcementBarStyle || "solid";
             
@@ -1242,6 +1378,8 @@ export default function App() {
               </div>
             </div>
           </footer>
+        </>
+      )}
 
           {/* --- ALL INTERACTIVE MODALS --- */}
           <AnimatePresence>
