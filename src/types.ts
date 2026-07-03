@@ -101,6 +101,7 @@ export interface Product {
   timesSold: number;
   details: string; // Markdown / extended specs
   type: 'normal' | 'box';
+  videoUrl?: string; // YouTube video link for embed reviews
   boxItems?: BoxItem[]; // Available outcomes if type = 'box'
   sellerId?: string;
   sellerName?: string;

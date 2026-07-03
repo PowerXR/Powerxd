@@ -309,6 +309,7 @@ export default function AdminPanel({
     imageUrl: "",
     description: "",
     details: "",
+    videoUrl: "",
     stockText: "", // Raw string split by lines to populate stock array
     type: "normal" as "normal" | "box",
     boxItemsText: "" // JSON string format for simplicity
@@ -1260,7 +1261,7 @@ export default function AdminPanel({
                     onClick={() => {
                       setEditingProductId(null);
                       setProductForm({
-                        name: "", categoryId: categories[0]?.id || "", price: 150, imageUrl: "", description: "", details: "", stockText: "", type: "normal", boxItemsText: ""
+                        name: "", categoryId: categories[0]?.id || "", price: 150, imageUrl: "", description: "", details: "", videoUrl: "", stockText: "", type: "normal", boxItemsText: ""
                       });
                       setShowProductForm(!showProductForm);
                     }}
@@ -1313,6 +1314,10 @@ export default function AdminPanel({
                         <label className="block mb-1 text-[10px] text-slate-400">รายละเอียดขยายความข้อมูลจำเพาะ (Specs Markdown)</label>
                         <textarea rows={3} value={productForm.details} onChange={e => setProductForm({...productForm, details: e.target.value})} className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white" placeholder="พิมพ์ฟีเจอร์เด่นๆ ของสินค้า" />
                       </div>
+                      <div className="col-span-2">
+                        <label className="block mb-1 text-[10px] text-slate-400">ลิงก์วิดีโอรีวิวจาก YouTube (YouTube Review URL)</label>
+                        <input type="url" value={productForm.videoUrl} onChange={e => setProductForm({...productForm, videoUrl: e.target.value})} className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white" placeholder="เช่น https://www.youtube.com/watch?v=xxxxxx หรือ https://youtu.be/xxxxxx" />
+                      </div>
 
                       {/* Stock keys list */}
                       <div className="col-span-2">
@@ -1362,7 +1367,7 @@ export default function AdminPanel({
                               onClick={() => {
                                 setEditingProductId(p.id);
                                 setProductForm({
-                                  name: p.name, categoryId: p.categoryId, price: p.price, imageUrl: p.imageUrl, description: p.description, details: p.details, stockText: p.stock.join("\n"), type: p.type, boxItemsText: ""
+                                  name: p.name, categoryId: p.categoryId, price: p.price, imageUrl: p.imageUrl, description: p.description, details: p.details, videoUrl: p.videoUrl || "", stockText: p.stock.join("\n"), type: p.type, boxItemsText: ""
                                 });
                                 setShowProductForm(true);
                               }}

@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Product, AppSettings, Coupon, Review, User } from "../types";
-import { X, Calendar, MessageSquare, ShieldAlert, Star, AlertCircle, ShoppingCart, Ticket, Sparkles, Check, Heart, Feather } from "lucide-react";
+import { X, Calendar, MessageSquare, ShieldAlert, Star, AlertCircle, ShoppingCart, Ticket, Sparkles, Check, Heart, Feather, Youtube, Video } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Language, getTranslation, getTranslatedProduct } from "../lib/translations";
+
+function getYouTubeId(url: string | undefined): string | null {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
 
 interface ProductDetailModalProps {
   product: Product;
@@ -33,8 +40,9 @@ export default function ProductDetailModal({
   onAddToCart
 }: ProductDetailModalProps) {
   const product = getTranslatedProduct(originalProduct, lang);
+  const youtubeVideoId = getYouTubeId(originalProduct.videoUrl);
 
-  const [activeTab, setActiveTab] = useState<"details" | "reviews">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "reviews" | "video">("details");
   const [quantity, setQuantity] = useState<number>(1);
   const [couponInput, setCouponInput] = useState<string>("");
   const [couponApplied, setCouponApplied] = useState<Coupon | null>(null);
@@ -169,8 +177,18 @@ export default function ProductDetailModal({
           
           {/* LEFT: Product thumbnail with warning notice */}
           <div className="md:col-span-12 lg:col-span-5 flex flex-col gap-4">
-            <div className="aspect-[4/3] bg-white dark:bg-stone-900 rounded-2xl overflow-hidden border border-[#8E6D4E]/10 relative shadow-sm">
-              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+            <div className="aspect-[4/3] bg-white dark:bg-stone-900 rounded-2xl overflow-hidden border border-[#8E6D4E]/10 relative shadow-sm group">
+              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" />
+              {originalProduct.videoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("video")}
+                  className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-red-600/90 hover:bg-red-650 text-white font-bold text-[10px] flex items-center gap-1.5 shadow-lg backdrop-blur-sm transition-all hover:scale-105 active:scale-95 cursor-pointer z-20"
+                >
+                  <Youtube size={12} className="animate-pulse" />
+                  <span>{lang === "th" ? "ดูวิดีโอรีวิว" : lang === "zh" ? "观看视频" : "Watch Review"}</span>
+                </button>
+              )}
             </div>
 
             {/* Warn Notice banner exactly as requested in mockup */}
@@ -218,6 +236,18 @@ export default function ProductDetailModal({
                 >
                   {getTranslation(lang, "productSpecsTab")}
                 </button>
+                {originalProduct.videoUrl && (
+                  <button 
+                    onClick={() => setActiveTab("video")}
+                    type="button"
+                    className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer flex items-center gap-1 ${
+                      activeTab === "video" ? `${activeColor} border-[#8E6D4E]` : 'text-stone-400 border-transparent hover:text-[#8E6D4E]'
+                    }`}
+                  >
+                    <Youtube size={12} className={activeTab === "video" ? "text-red-500 animate-pulse" : "text-stone-400"} />
+                    <span>{lang === "th" ? "วิดีโอรีวิว" : lang === "zh" ? "视频评测" : "Video Review"}</span>
+                  </button>
+                )}
                 <button 
                   onClick={() => setActiveTab("reviews")}
                   type="button"
@@ -235,7 +265,7 @@ export default function ProductDetailModal({
 
               {/* Tab content renderer */}
               <div className="max-h-52 overflow-y-auto pr-2 mb-4">
-                {activeTab === "details" ? (
+                {activeTab === "details" && (
                   <div className="text-xs text-stone-600 dark:text-stone-300 space-y-3 mt-1 leading-relaxed whitespace-pre-line font-light">
                     {product.details ? (
                       <div className="markdown-body">
@@ -252,7 +282,31 @@ export default function ProductDetailModal({
                       </div>
                     )}
                   </div>
-                ) : (
+                )}
+
+                {activeTab === "video" && (
+                  <div className="space-y-3 mt-1">
+                    {youtubeVideoId ? (
+                      <div className="w-full aspect-video rounded-xl overflow-hidden border border-[#8E6D4E]/20 bg-black shadow-inner">
+                        <iframe
+                          className="w-full h-full"
+                          src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=0&rel=0`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-xs text-center">
+                        <p className="font-semibold">ไม่สามารถโหลดวิดีโอ YouTube ได้</p>
+                        <p className="text-[10px] text-stone-500 mt-1">ลิงก์วิดีโออาจจะไม่ถูกต้อง: {originalProduct.videoUrl}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "reviews" && (
                   <div className="space-y-3 mt-1">
                     {productReviews.length === 0 ? (
                       <div className="text-center py-6 text-stone-400 text-xs font-light">{getTranslation(lang, "noReviewsYet")}</div>

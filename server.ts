@@ -533,6 +533,7 @@ async function startServer() {
       timesSold: 0,
       details: req.body.details || "",
       type: req.body.type || "normal",
+      videoUrl: req.body.videoUrl || "",
       boxItems: req.body.boxItems || []
     };
     db.products.push(newProd);
