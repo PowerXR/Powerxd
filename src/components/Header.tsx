@@ -57,18 +57,18 @@ export default function Header({
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex items-center gap-2.5"
+            className="flex items-center gap-2"
           >
             {settings.siteLogoUrl ? (
-              <div className="w-9 h-9 rounded-xl overflow-hidden border border-[#8E6D4E]/20 bg-[#FAF7F2] dark:bg-[#1E1916] flex items-center justify-center">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden border border-[#8E6D4E]/20 bg-[#FAF7F2] dark:bg-[#1E1916] flex items-center justify-center">
                 <img src={settings.siteLogoUrl} alt="Logo" className="w-full h-full object-contain" />
               </div>
             ) : (
               <div className="p-1.5 rounded-xl border border-[#8E6D4E]/20 bg-[#FAF7F2] dark:bg-[#1E1916] text-[#8E6D4E]">
-                <Palette className="h-5 w-5" />
+                <Palette className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             )}
-            <span className="text-xl font-bold font-serif tracking-tight text-[#4E3B2C] dark:text-[#EAE3DA]">
+            <span className="text-base sm:text-xl font-bold font-serif tracking-tight text-[#4E3B2C] dark:text-[#EAE3DA]">
               {settings.siteName}
             </span>
           </motion.div>
@@ -85,10 +85,10 @@ export default function Header({
         </nav>
 
         {/* Right Section Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           
-          {/* Language Selector Dropdown */}
-          <div className="relative">
+          {/* Language Selector Dropdown (Hidden on Mobile, handled inside mobile menu) */}
+          <div className="relative hidden md:block">
             <button 
               onClick={() => setLangDropdownOpen(!langDropdownOpen)}
               className="p-2 rounded-xl text-[#735A45] hover:text-[#8E6D4E] hover:bg-[#8E6D4E]/5 dark:text-[#C5B49E] dark:hover:text-[#FAF7F2] transition-colors flex items-center gap-1.5 cursor-pointer text-xs font-bold"
@@ -108,7 +108,7 @@ export default function Header({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 mt-2 w-32 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1A16] border border-[#8E6D4E]/20 shadow-xl p-1 z-20"
+                    className="absolute right-0 mt-2 window-dropdown w-32 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1A16] border border-[#8E6D4E]/20 shadow-xl p-1 z-20"
                   >
                     <button 
                       onClick={() => { setLang("th"); setLangDropdownOpen(false); }}
@@ -137,11 +137,11 @@ export default function Header({
             </AnimatePresence>
           </div>
 
-          {/* Theme Toggler */}
+          {/* Theme Toggler (Hidden on Mobile, handled inside mobile menu) */}
           <button 
             id="theme-toggler"
             onClick={toggleTheme}
-            className="p-2 rounded-xl text-[#735A45] hover:text-[#8E6D4E] hover:bg-[#8E6D4E]/5 dark:text-[#C5B49E] dark:hover:text-[#FAF7F2] transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-[#735A45] hover:text-[#8E6D4E] hover:bg-[#8E6D4E]/5 dark:text-[#C5B49E] dark:hover:text-[#FAF7F2] transition-colors cursor-pointer hidden md:inline-flex"
             title={theme === "dark" ? "หน้าจอโหมดสว่าง" : "หน้าจอโหมดมืด"}
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
@@ -163,12 +163,12 @@ export default function Header({
 
           {user ? (
             /* Logged in layout */
-            <div className="flex items-center gap-3">
-              {/* Balance Badge */}
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              {/* Balance Badge (Hidden on mobile) */}
               <motion.button 
                 whileHover={{ scale: 1.02 }}
                 onClick={onOpenTopup}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer ${badgeBg}`}
+                className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer ${badgeBg}`}
               >
                 <Coins size={14} />
                 <span>{user.balance.toFixed(2)} ฿</span>
@@ -180,7 +180,7 @@ export default function Header({
                 <button 
                   id="profile-dropdown-btn"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#FAF7F2] border border-[#8E6D4E]/20 text-[#4E3B2C] dark:bg-[#1E1A16] dark:text-[#ECE5DC] hover:border-[#8E6D4E]/40 transition-all text-sm cursor-pointer"
+                  className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-[#FAF7F2] border border-[#8E6D4E]/20 text-[#4E3B2C] dark:bg-[#1E1A16] dark:text-[#ECE5DC] hover:border-[#8E6D4E]/40 transition-all text-sm cursor-pointer"
                 >
                   {user.avatarUrl ? (
                     <img src={user.avatarUrl} alt="Avatar" className="w-5 h-5 rounded-full object-cover" />
@@ -189,8 +189,8 @@ export default function Header({
                       {user.username.charAt(0).toUpperCase()}
                     </span>
                   )}
-                  <span className="font-semibold max-w-[80px] truncate">{user.username}</span>
-                  <span className="text-[10px] opacity-60">▼</span>
+                  <span className="font-semibold max-w-[80px] truncate hidden sm:inline-block">{user.username}</span>
+                  <span className="text-[10px] opacity-60 hidden sm:inline-block">▼</span>
                 </button>
 
                 {/* Dropdown Box */}
@@ -202,7 +202,7 @@ export default function Header({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute right-0 mt-2 w-52 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1A16] border border-[#8E6D4E]/20 shadow-xl p-1.5 z-20"
+                        className="absolute right-0 mt-2 w-52 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1A16] border border-[#8E6D4E]/20 shadow-xl p-1.5 z-20 text-[#4E3B2C] dark:text-stone-200"
                       >
                         <div className="px-3 py-2 border-b border-[#8E6D4E]/10">
                           <p className="text-[10px] font-semibold text-[#8E6D4E]">{getTranslation(lang, "rolePanel")}</p>
@@ -271,10 +271,10 @@ export default function Header({
             </div>
           ) : (
             /* Guest login actions */
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button 
                 onClick={() => onOpenAuth("login")}
-                className="px-5 py-2 rounded-full border border-stone-700/60 hover:border-[#8E6D4E]/60 text-[#C5B49E] hover:text-white text-xs font-semibold flex items-center gap-2 bg-[#1A1613]/40 hover:bg-[#8E6D4E]/10 transition-all duration-300 cursor-pointer"
+                className="px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl border border-stone-700/60 hover:border-[#8E6D4E]/60 text-[#C5B49E] hover:text-white text-xs font-semibold flex items-center gap-1.5 sm:gap-2 bg-[#1A1613]/40 hover:bg-[#8E6D4E]/10 transition-all duration-300 cursor-pointer"
               >
                 <UserIcon size={13} className="text-[#C5B49E]" />
                 <span>{getTranslation(lang, "login")}</span>
@@ -299,74 +299,178 @@ export default function Header({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-[#8E6D4E]/10 bg-[#FAF7F2] dark:bg-[#141210] px-4 py-3 space-y-3 font-medium text-[#735A45] dark:text-[#C5B49E] text-sm"
+            className="md:hidden border-t border-[#8E6D4E]/10 bg-[#FAF7F2] dark:bg-[#141210] px-4 py-4 space-y-4 font-medium text-[#735A45] dark:text-[#C5B49E] text-sm overflow-hidden"
           >
-            <a href="#homepage" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "home")}</a>
-            <a href="#about-us-section" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "aboutUs")}</a>
-            <a href="#portfolios-section" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "portfolios")}</a>
-            <a href="#artisans-section" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "artisans")}</a>
-            <a href="#recommended-products" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "products")}</a>
-            <button 
-              onClick={() => { setMobileMenuOpen(false); onOpenCart(); }} 
-              className="block w-full py-1.5 text-left hover:text-[#8E6D4E] cursor-pointer flex items-center justify-between"
-            >
-              <span>🛒 ตะกร้าสินค้า ({cartItemsCount})</span>
-            </button>
-            <button 
-              onClick={() => { setMobileMenuOpen(false); onOpenTopup(); }} 
-              className="block w-full py-1.5 text-left hover:text-[#8E6D4E] cursor-pointer"
-            >
-              {getTranslation(lang, "support")}
-            </button>
-            <a href={settings.contactFacebook} target="_blank" rel="noreferrer" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-[#8E6D4E]">{getTranslation(lang, "contactUs")}</a>
-            
-            {!user && (
-              <div className="pt-2 border-t border-[#8E6D4E]/10 flex gap-2">
+            {/* 1. Mobile Profile Summary Panel */}
+            {user ? (
+              <div className="p-4 rounded-2xl bg-[#8E6D4E]/5 dark:bg-[#1E1A16]/50 border border-[#8E6D4E]/15 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="Avatar" className="w-12 h-12 rounded-full border border-[#8E6D4E]/20 object-cover" />
+                  ) : (
+                    <span className="w-12 h-12 rounded-full bg-[#8E6D4E]/10 flex items-center justify-center text-lg font-bold text-[#8E6D4E] border border-[#8E6D4E]/20">
+                      {user.username.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-extrabold text-sm text-[#4E3B2C] dark:text-[#EAE3DA] truncate">{user.username}</p>
+                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#8E6D4E]/10 text-[#8E6D4E]">
+                      {user.role === 'admin' ? getTranslation(lang, "adminRole") : getTranslation(lang, "memberRole")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-[#8E6D4E]/10 text-xs">
+                  <div className="flex items-center gap-1.5 text-stone-600 dark:text-stone-300">
+                    <Coins size={14} className="text-[#8E6D4E]" />
+                    <span>{getTranslation(lang, "balance") || "ยอดเงินคงเหลือ"}: <span className="font-bold">{user.balance.toFixed(2)} ฿</span></span>
+                  </div>
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); onOpenTopup(); }}
+                    className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg bg-[#8E6D4E] text-white hover:bg-[#725437] transition-all cursor-pointer"
+                  >
+                    {getTranslation(lang, "supportBtn")}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#8E6D4E]/10">
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); onOpenProfile(); }}
+                    className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-white dark:bg-[#151210] border border-[#8E6D4E]/15 hover:border-[#8E6D4E]/30 text-xs font-bold text-[#4E3B2C] dark:text-stone-200 transition-all cursor-pointer"
+                  >
+                    <UserIcon size={13} className="text-[#8E6D4E]" />
+                    <span>แก้ไขโปรไฟล์</span>
+                  </button>
+                  {user.role === 'admin' && (
+                    <button 
+                      onClick={() => { setMobileMenuOpen(false); onOpenAdmin(); }}
+                      className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      <LayoutDashboard size={13} />
+                      <span>ระบบแอดมิน</span>
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); onOpenSellerDashboard(); }}
+                    className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <Settings size={13} />
+                    <span>{user.role?.startsWith('seller') ? "แผงผู้ขาย" : "สมัครเป็นผู้ขาย"}</span>
+                  </button>
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); onOpenChat(); }}
+                    className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <MessageSquare size={13} />
+                    <span>แชทชุมชน</span>
+                  </button>
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); onOpenHistory(); }}
+                    className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-white dark:bg-[#151210] border border-[#8E6D4E]/15 hover:border-[#8E6D4E]/30 text-xs font-bold text-[#4E3B2C] dark:text-stone-200 transition-all cursor-pointer col-span-2"
+                  >
+                    <Coins size={13} className="text-[#8E6D4E]" />
+                    <span>{getTranslation(lang, "purchaseHistory")}</span>
+                  </button>
+                </div>
+
                 <button 
-                  onClick={() => { setMobileMenuOpen(false); onOpenAuth("login"); }}
-                  className="flex-1 py-1.5 text-center text-xs font-bold rounded-xl bg-[#FAF7F2] border border-[#8E6D4E]/20 text-[#4E3B2C] dark:bg-[#1E1A16] dark:text-slate-200 transition-all"
+                  onClick={() => { setMobileMenuOpen(false); onLogout(); }}
+                  className="w-full mt-1 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 hover:text-red-700 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  {getTranslation(lang, "login")}
+                  <LogOut size={13} />
+                  <span>{getTranslation(lang, "logout")}</span>
                 </button>
-                <button 
-                  onClick={() => { setMobileMenuOpen(false); onOpenAuth("register"); }}
-                  className="flex-1 py-1.5 text-center text-xs font-bold rounded-xl bg-[#8E6D4E] text-white hover:bg-[#725437] transition-all"
-                >
-                  {getTranslation(lang, "register")}
-                </button>
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-[#8E6D4E]/5 dark:bg-[#1E1A16]/30 border border-[#8E6D4E]/15 flex flex-col gap-2.5">
+                <p className="text-xs text-stone-500 dark:text-stone-400 text-center font-bold">
+                  {lang === "zh" ? "登录解锁更多功能" : lang === "en" ? "Log in to unlock features" : "เข้าสู่ระบบเพื่อเปิดใช้งานฟังก์ชันพิเศษ"}
+                </p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); onOpenAuth("login"); }}
+                    className="flex-1 py-2.5 text-center text-xs font-bold rounded-xl bg-white dark:bg-[#1E1A16] border border-[#8E6D4E]/20 text-[#4E3B2C] dark:text-slate-200 transition-all cursor-pointer"
+                  >
+                    {getTranslation(lang, "login")}
+                  </button>
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); onOpenAuth("register"); }}
+                    className="flex-1 py-2.5 text-center text-xs font-bold rounded-xl bg-[#8E6D4E] text-white hover:bg-[#725437] transition-all cursor-pointer"
+                  >
+                    {getTranslation(lang, "register")}
+                  </button>
+                </div>
               </div>
             )}
 
-            {user && (
-              <div className="pt-2 border-t border-[#8E6D4E]/10 space-y-2">
-                {user.role === 'admin' && (
-                  <button 
-                    onClick={() => { setMobileMenuOpen(false); onOpenAdmin(); }}
-                    className="w-full text-left py-1.5 hover:text-[#8E6D4E] cursor-pointer text-xs font-bold text-amber-700 dark:text-amber-400"
-                  >
-                    👑 {getTranslation(lang, "adminDashboard")}
-                  </button>
-                )}
+            {/* 2. Mobile Language and Theme Row */}
+            <div className="p-3 rounded-2xl bg-stone-100/60 dark:bg-stone-900/40 border border-[#8E6D4E]/5 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-stone-600 dark:text-stone-400">
+                  {theme === "dark" ? "🌙 โหมดมืด" : "☀️ โหมดสว่าง"}
+                </span>
                 <button 
-                  onClick={() => { setMobileMenuOpen(false); onOpenSellerDashboard(); }}
-                  className="w-full text-left py-1.5 hover:text-[#8E6D4E] cursor-pointer text-xs font-bold text-teal-600 dark:text-teal-400"
+                  onClick={toggleTheme}
+                  className="p-1.5 rounded-lg bg-white dark:bg-[#1E1A16] border border-[#8E6D4E]/25 text-[#8E6D4E] hover:bg-[#8E6D4E]/5 transition-all cursor-pointer flex items-center justify-center"
                 >
-                  🏪 {user.role?.startsWith('seller') ? "แผงควบคุมร้านค้า" : "สมัครเป็นผู้ขาย"}
-                </button>
-                <button 
-                  onClick={() => { setMobileMenuOpen(false); onOpenHistory(); }}
-                  className="w-full text-left py-1.5 hover:text-[#8E6D4E] cursor-pointer text-xs font-bold"
-                >
-                  📜 {getTranslation(lang, "purchaseHistory")}
-                </button>
-                <button 
-                  onClick={() => { setMobileMenuOpen(false); onLogout(); }}
-                  className="w-full text-left py-1.5 hover:text-red-500 text-red-600 text-xs font-bold"
-                >
-                  🚪 {getTranslation(lang, "logout")}
+                  {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
                 </button>
               </div>
-            )}
+
+              {/* Quick Language Switcher */}
+              <div className="flex gap-1 bg-white/50 dark:bg-[#141210]/50 p-0.5 rounded-lg border border-[#8E6D4E]/10">
+                <button 
+                  onClick={() => setLang("th")}
+                  className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${lang === 'th' ? 'bg-[#8E6D4E] text-white' : 'text-stone-500 hover:bg-[#8E6D4E]/5'}`}
+                >
+                  🇹🇭 TH
+                </button>
+                <button 
+                  onClick={() => setLang("en")}
+                  className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${lang === 'en' ? 'bg-[#8E6D4E] text-white' : 'text-stone-500 hover:bg-[#8E6D4E]/5'}`}
+                >
+                  🇺🇸 EN
+                </button>
+                <button 
+                  onClick={() => setLang("zh")}
+                  className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${lang === 'zh' ? 'bg-[#8E6D4E] text-white' : 'text-stone-500 hover:bg-[#8E6D4E]/5'}`}
+                >
+                  🇨🇳 ZH
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Navigation Links */}
+            <div className="py-2 space-y-1">
+              <p className="text-[10px] font-extrabold text-[#8E6D4E] uppercase px-2.5 mb-2 tracking-wider">
+                {lang === "zh" ? "导航" : lang === "en" ? "Navigation" : "เมนูนำทาง"}
+              </p>
+              <a href="#homepage" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#8E6D4E]/5 text-stone-600 dark:text-stone-300 hover:text-[#8E6D4E] font-semibold text-xs transition-all">
+                🏠 {getTranslation(lang, "home")}
+              </a>
+              <a href="#about-us-section" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#8E6D4E]/5 text-stone-600 dark:text-stone-300 hover:text-[#8E6D4E] font-semibold text-xs transition-all">
+                ℹ️ {getTranslation(lang, "aboutUs")}
+              </a>
+              <a href="#portfolios-section" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#8E6D4E]/5 text-stone-600 dark:text-stone-300 hover:text-[#8E6D4E] font-semibold text-xs transition-all">
+                🎨 {getTranslation(lang, "portfolios")}
+              </a>
+              <a href="#artisans-section" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#8E6D4E]/5 text-stone-600 dark:text-stone-300 hover:text-[#8E6D4E] font-semibold text-xs transition-all">
+                🤝 {getTranslation(lang, "artisans")}
+              </a>
+              <a href="#recommended-products" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#8E6D4E]/5 text-stone-600 dark:text-stone-300 hover:text-[#8E6D4E] font-semibold text-xs transition-all">
+                🛍️ {getTranslation(lang, "products")}
+              </a>
+              <button 
+                onClick={() => { setMobileMenuOpen(false); onOpenCart(); }} 
+                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-[#8E6D4E]/5 text-stone-600 dark:text-stone-300 hover:text-[#8E6D4E] font-semibold text-xs transition-all cursor-pointer"
+              >
+                <span className="flex items-center gap-2.5">🛒 {lang === "zh" ? "我的购物车" : lang === "en" ? "My Cart" : "ตะกร้าสินค้าของฉัน"}</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-extrabold">{cartItemsCount}</span>
+              </button>
+              <a href={settings.contactFacebook || "#"} target="_blank" rel="noreferrer" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#8E6D4E]/5 text-stone-600 dark:text-stone-300 hover:text-[#8E6D4E] font-semibold text-xs transition-all">
+                📞 {getTranslation(lang, "contactUs")}
+              </a>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
