@@ -55,6 +55,7 @@ export interface AppSettings {
   maintenanceMessage?: string;
   maintenanceEstimatedTime?: string;
   maintenanceAutoOpenTime?: string; // ISO or YYYY-MM-DDTHH:MM datetime string when maintenance should automatically end
+  serverTime?: number; // Server epoch timestamp to synchronize client clocks
   aboutUsTitle?: string;
   aboutUsBody?: string;
   aboutUsImageUrl?: string;

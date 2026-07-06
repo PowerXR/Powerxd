@@ -362,11 +362,11 @@ export default function RecentOrdersMarquee({ products, lang, onSelectProduct, s
   // Seamless triplication of items to achieve infinite scrolling
   const displayPurchases = purchases.length >= 3
     ? [
-        ...purchases.map(p => ({ ...p, uniqueKey: `${p.id}-c1` })),
-        ...purchases.map(p => ({ ...p, uniqueKey: `${p.id}-c2` })),
-        ...purchases.map(p => ({ ...p, uniqueKey: `${p.id}-c3` }))
+        ...purchases.map((p, idx) => ({ ...p, uniqueKey: `${p.id}-c1-${idx}` })),
+        ...purchases.map((p, idx) => ({ ...p, uniqueKey: `${p.id}-c2-${idx}` })),
+        ...purchases.map((p, idx) => ({ ...p, uniqueKey: `${p.id}-c3-${idx}` }))
       ]
-    : purchases.map(p => ({ ...p, uniqueKey: p.id }));
+    : purchases.map((p, idx) => ({ ...p, uniqueKey: `${p.id}-${idx}` }));
 
   const currentThemeStyle = getStyleConfig(settings?.recentOrdersStyle);
 

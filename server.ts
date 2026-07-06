@@ -127,13 +127,8 @@ function loadDB() {
             "imageUrl": "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=600&q=80"
           }
         ],
-        "recentOrdersActive": true,
-        "recentOrdersStyle": "sunset-orange",
-        "seasonalEffect": "none",
         "maintenanceActive": true,
-        "maintenanceTitle": "ปิดปรับปรุง",
-        "maintenanceEstimatedTime": "2ชั่วโมง",
-        "maintenanceMessage": "ปิด"
+        "maintenanceAutoOpenTime": "2026-07-06T10:54"
       } as AppSettings,
     categories: [
       { id: "cat-1", name: "สินค้าขายดี", description: "รหัสเกมและไอดีเกมพรีเมียม สต็อกพร้อมส่งทันที", icon: "TrendingUp", imageUrl: "" },
@@ -389,50 +384,48 @@ async function startServer() {
 
   // --- API ROUTES ---
 
+  // Helper to parse date consistently with +07:00 (Thai) timezone if no timezone offset is provided
+  const parseTargetTime = (timeStr: string): Date => {
+    if (!timeStr) return new Date();
+    if (timeStr.includes("Z") || timeStr.includes("+") || /-\d{2}:\d{2}$/.test(timeStr)) {
+      return new Date(timeStr);
+    }
+    return new Date(timeStr + "+07:00");
+  };
+
   // Get Store Settings
   app.get("/api/settings", (req, res) => {
     // Check if auto-open time has passed and maintenance is active
     if (db.settings.maintenanceActive && db.settings.maintenanceAutoOpenTime) {
       try {
-        const autoOpenDate = new Date(db.settings.maintenanceAutoOpenTime);
+        const autoOpenDate = parseTargetTime(db.settings.maintenanceAutoOpenTime);
         const currentDate = new Date();
-        if (!isNaN(autoOpenDate.getTime()) && currentDate >= autoOpenDate) {
+        // Allow a 15-second grace period for clock skew between client and server
+        if (!isNaN(autoOpenDate.getTime()) && (currentDate.getTime() + 15000) >= autoOpenDate.getTime()) {
           console.log(`Auto-open scheduled time reached: ${db.settings.maintenanceAutoOpenTime}. Automatically opening the website.`);
           db.settings.maintenanceActive = false;
           db.settings.maintenanceAutoOpenTime = ""; // Clear schedule
           saveDB(db);
-
-          // Persist settings in server.ts so they are backed up in the source file
-          try {
-            const serverCodePath = path.join(process.cwd(), "server.ts");
-            if (fs.existsSync(serverCodePath)) {
-              let serverCode = fs.readFileSync(serverCodePath, "utf-8");
-              const startMarker = "    settings: {";
-              const endMarker = "    } as AppSettings,";
-              const startIndex = serverCode.indexOf(startMarker);
-              const endIndex = serverCode.indexOf(endMarker);
-              if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-                const settingsStr = JSON.stringify(db.settings, null, 2)
-                  .split("\n")
-                  .map((line, i) => i === 0 ? line : "      " + line)
-                  .join("\n");
-                
-                const before = serverCode.substring(0, startIndex);
-                const after = serverCode.substring(endIndex);
-                const newCode = before + "    settings: " + settingsStr + "\n" + "  " + after;
-                fs.writeFileSync(serverCodePath, newCode, "utf-8");
-                console.log("Successfully persisted settings to server.ts source code during auto-open!");
-              }
-            }
-          } catch (sourceErr) {
-            console.error("Failed to persist settings to server.ts source code during auto-open:", sourceErr);
-          }
         }
       } catch (err) {
         console.error("Error checking auto-open settings:", err);
       }
     }
-    res.json(db.settings);
+    res.json({ ...db.settings, serverTime: Date.now() });
+  });
+
+  // Auto-open endpoint when countdown completes
+  app.post("/api/settings/auto-open", (req, res) => {
+    try {
+      console.log("Auto-open triggered by client. Automatically opening the website.");
+      db.settings.maintenanceActive = false;
+      db.settings.maintenanceAutoOpenTime = ""; // Clear schedule
+      saveDB(db);
+      res.json({ success: true, settings: db.settings });
+    } catch (err: any) {
+      console.error("Error in auto-open endpoint:", err);
+      res.status(500).json({ error: err.message || "Failed to auto-open settings" });
+    }
   });
 
   // Update Store Settings (Admin)

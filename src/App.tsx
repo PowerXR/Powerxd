@@ -865,10 +865,23 @@ export default function App() {
                     {settings.maintenanceAutoOpenTime && (
                       <MaintenanceCountdown 
                         targetTime={settings.maintenanceAutoOpenTime}
+                        serverTime={settings.serverTime}
                         lang={lang}
                         onComplete={async () => {
-                          // Force a complete settings refresh immediately to open the site
-                          await loadStoreData();
+                          if (window.sessionStorage.getItem("is_auto_opening")) {
+                            return;
+                          }
+                          window.sessionStorage.setItem("is_auto_opening", "true");
+                          
+                          try {
+                            await fetch("/api/settings/auto-open", { method: "POST" });
+                          } catch (e) {
+                            console.error("Failed to auto-open:", e);
+                          } finally {
+                            window.sessionStorage.removeItem("is_auto_opening");
+                          }
+                          
+                          window.location.reload();
                         }}
                       />
                     )}

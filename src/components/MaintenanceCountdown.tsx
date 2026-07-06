@@ -5,12 +5,23 @@ interface MaintenanceCountdownProps {
   targetTime: string;
   lang: string;
   onComplete: () => void;
+  serverTime?: number;
 }
+
+// Helper to parse date consistently with +07:00 (Thai) timezone if no timezone offset is provided
+const parseTargetTime = (timeStr: string): Date => {
+  if (!timeStr) return new Date();
+  if (timeStr.includes("Z") || timeStr.includes("+") || /-\d{2}:\d{2}$/.test(timeStr)) {
+    return new Date(timeStr);
+  }
+  return new Date(timeStr + "+07:00");
+};
 
 export const MaintenanceCountdown: React.FC<MaintenanceCountdownProps> = ({
   targetTime,
   lang,
   onComplete,
+  serverTime,
 }) => {
   const [timeLeft, setTimeLeft] = useState<{
     hours: number;
@@ -20,8 +31,14 @@ export const MaintenanceCountdown: React.FC<MaintenanceCountdownProps> = ({
   }>({ hours: 0, minutes: 0, seconds: 0, completed: false });
 
   useEffect(() => {
+    // Calculate the difference between client clock and server clock at the moment settings were loaded
+    const serverTimeOffset = serverTime ? (Date.now() - serverTime) : 0;
+
     const calculateTimeLeft = () => {
-      const difference = +new Date(targetTime) - +new Date();
+      // Adjust client's current timestamp with the offset to get the server-synchronized timestamp
+      const synchronizedNow = Date.now() - serverTimeOffset;
+      const difference = +parseTargetTime(targetTime) - synchronizedNow;
+      
       if (difference <= 0) {
         return { hours: 0, minutes: 0, seconds: 0, completed: true };
       }
