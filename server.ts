@@ -29,108 +29,50 @@ async function loadDB() {
         "discordClientId": "1122334455667788",
         "discordClientSecret": "xyz_secret_demo_key",
         "banners": [
-          "https://images.unsplash.com/photo-1550159930-40066082a4fc?auto=format&fit=crop&w=1600&q=80"
+          "https://img2.pic.in.th/b1df6a32-3180-4736-9a4d-903c22ce4fc3.png",
+          "https://img2.pic.in.th/f7db84cb-36e4-483c-91f7-0fcb6ff77ac6.png",
+          "https://img2.pic.in.th/e2869c58-fd33-4df3-90ef-3f0f2e97573e.png"
         ],
         "allowAngpao": true,
         "allowQr": true,
         "announcementFloatActive": true,
-        "announcementFloatText": "✨ ยินดีต้อนรับสู่ชุมชนตำบลน้ำน้อย! พบกับหัตถศิลป์ล้ำค่าและผลิตภัณฑ์บาติกเขียนเทียนแท้ดั้งเดิมของดีจากช่างทอชุมชน สั่งซื้อวันนี้รับสิทธิ์สนับสนุนกลุ่มปราชญ์ชาวบ้านโดยตรงนะคะ 💖",
+        "announcementFloatText": "✨ ยินดีต้อนรับสู่ชุมชนตำบลน้ำน้อย! 💖",
         "announcementFloatStyle": "luxury-gold",
         "announcementFloatIcon": "welcome",
         "announcementFloatPosition": "bottom-right",
         "aboutUsTitle": "วิถีแห่งภูมิปัญญาท้องถิ่น ชุมชนน้ำน้อย",
         "aboutUsBody": "กลุ่มทอผ้าบาติกและหัตถกรรมจักสานใบลาน ตำบลน้ำน้อย อำเภอหาดใหญ่ จังหวัดสงขลา ร่วมใจกันสืบสานและถ่ายทอดเอกลักษณ์ทางวัฒนธรรมจากรุ่นสู่รุ่น สร้างสรรค์ผลงานทำมือที่เปี่ยมไปด้วยจิตวิญญาณแห่งความเป็นไทยพรีเมียม",
         "aboutUsImageUrl": "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80",
-        "portfolios": [
-          {
-            "id": "port-1",
-            "title": "ผ้าบาติกเขียนมือลายดอกพิกุล",
-            "description": "งานทอและเขียนเทียนลายทองโบราณที่สืบทอดกันมากว่า 80 ปี สีสันสดสวยจากธรรมชาติ",
-            "imageUrl": "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?auto=format&fit=crop&w=400&q=80"
-          },
-          {
-            "id": "port-2",
-            "title": "กระเป๋าจักสานใบลานประณีตลายลูกแก้ว",
-            "description": "การจักสานจากใบลานป่าคุณภาพดี โครงสร้างแข็งแรง รูปทรงร่วมสมัย ทนทานนานนับสิบปี",
-            "imageUrl": "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=400&q=80"
-          }
-        ],
-        "artisans": [
-          {
-            "id": "art-1",
-            "name": "ป้าอิ่ม จิตรประจง",
-            "expertise": "บรมครูช่างเขียนผ้าบาติกโบราณ",
-            "bio": "ผู้เชี่ยวชาญการใช้เทียนและสีย้อมธรรมชาติ มีประสบการณ์การทอผ้าและทำบาติกมากว่า 40 ปีในชุมชนน้ำน้อย",
-            "imageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80"
-          },
-          {
-            "id": "art-2",
-            "name": "ลุงไข่ นิลสุวรรณ",
-            "expertise": "ช่างศิลป์หัตถกรรมจักสานใบลาน",
-            "bio": "ปราชญ์ท้องถิ่นผู้ชำนาญการเลือกใบและจักตอกใบลานให้เหนียวนุ่ม ถ่ายทอดงานจักสานให้เยาวชนฟรี",
-            "imageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80"
-          }
-        ],
+        "portfolios": [],
+        "artisans": [],
         "landmarks": [
           {
             "id": "loc-municipality",
             "name": "สำนักงานเทศบาลตำบลน้ำน้อย",
             "type": "admin",
-            "lat": 7.0518,
-            "lng": 100.5285,
+            "lat": 7.103722,
+            "lng": 100.526611,
             "description": "ศูนย์กลางการประสานงานราชการ บริการประชาชน และจุดรวมการสนับสนุนส่งเสริมอาชีพชุมชนและผ้าบาติก",
             "phone": "074-211111",
-            "imageUrl": "https://images.unsplash.com/photo-1577086664693-894d8405334a?auto=format&fit=crop&w=600&q=80"
-          },
-          {
-            "id": "loc-batik",
-            "name": "ศูนย์เรียนรู้และกลุ่มทอผ้าบาติกน้ำน้อย",
-            "type": "craft",
-            "lat": 7.0455,
-            "lng": 100.5212,
-            "description": "แหล่งผลิตผ้าบาติกทำมือชั้นยอดประจำจังหวัดสงขลา เป็นจุดสืบทอดภูมิปัญญาและเวิร์กชอปเขียนเทียนย้อมสี",
-            "imageUrl": "https://images.unsplash.com/photo-1528164344705-47542687000d?auto=format&fit=crop&w=600&q=80"
-          },
-          {
-            "id": "loc-palm",
-            "name": "กลุ่มวิสาหกิจจักสานใบลานลานไทยน้ำน้อย",
-            "type": "craft",
-            "lat": 7.0482,
-            "lng": 100.5245,
-            "description": "กลุ่มหัตถกรรมจักสานใบลานพื้นบ้าน แปรรูปเป็นหมวก กระเป๋า และของตกแต่งคุณภาพส่งออก OTOP ทะเบียนสำคัญ",
-            "imageUrl": "https://images.unsplash.com/photo-1590736969955-71cc94801759?auto=format&fit=crop&w=600&q=80"
-          },
-          {
-            "id": "loc-temple-nok",
-            "name": "วัดน้ำน้อยนอก (วัดประดิษฐานหลวงพ่อท่านเจ้าคุณ)",
-            "type": "temple",
-            "lat": 7.0423,
-            "lng": 100.5235,
-            "description": "ศูนย์รวมศรัทธาสำคัญ ประดิษฐานรูปหล่อพระครูประสาทสุตาคุณอันเป็นที่เคารพรัก มีสถาปัตยกรรมท้องถิ่นอันงดงาม",
-            "imageUrl": "https://images.unsplash.com/photo-1609137144813-91b489506692?auto=format&fit=crop&w=600&q=80"
-          },
-          {
-            "id": "loc-waterfall",
-            "name": "น้ำตกหัวรน (อุทยานป่าต้นน้ำน้ำน้อย)",
-            "type": "nature",
-            "lat": 7.0621,
-            "lng": 100.541,
-            "description": "น้ำตกธรรมชาติต้นน้ำที่สมบูรณ์ โอบล้อมด้วยแนวเขาสวนป่าเขียวขจี เป็นแหล่งพักผ่อนหย่อนใจทางธรรมชาติชั้นเยี่ยม",
-            "imageUrl": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80"
-          },
-          {
-            "id": "loc-market",
-            "name": "ตลาดนัดวิถีชุมชนประชารัฐน้ำน้อย",
-            "type": "market",
-            "lat": 7.0501,
-            "lng": 100.5268,
-            "description": "ตลาดจำหน่ายสินค้าเกษตรอินทรีย์ อาหารพื้นบ้าน และผลิตภัณฑ์จักสานงานมือของพี่น้องชุมชนรอบเขตเทศบาล",
-            "imageUrl": "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=600&q=80"
+            "imageUrl": "/uploads/Screenshot_2026_06_30_100510_1782788731613.png"
           }
         ],
-        "maintenanceActive": true,
-        "maintenanceAutoOpenTime": "2026-07-06T10:54"
-      } as AppSettings,
+        "announcementActive": true,
+        "announcementTitle": "ยินดีต้อนรับเข้าสู่เว็ปไซต์ ชมชุนตำบลน้ำน้อย",
+        "announcementImageUrl": "https://img1.pic.in.th/images/b15c2d30-b6d1-458b-981d-95b08979efe5852335d6764e55b2.png",
+        "announcementBody": "พบปัญหาอะไรแจ้งแอดมินได้เลย",
+        "announcementBarActive": true,
+        "siteLogoUrl": "https://img2.pic.in.th/5595086c-0387-4014-ac58-3fb75aba4ee9.png",
+        "seasonalEffect": "snow",
+        "announcementBarText": "ยินดีต้อนรับสู่ชุมชนน้ำน้อยดิจิทัล สอบถามปัญหาแจ้งติดต่อแอดมินได้เลย ขอบคุณครับ",
+        "announcementBarStyle": "neon-glow",
+        "announcementBarSpeed": 24,
+        "announcementBarPrefix": "📢",
+        "recommendActive": true,
+        "recommendProductIds": [
+          "prod-1782786177730"
+        ]
+    } as AppSettings,
     categories: [
       { id: "cat-1", name: "สินค้าขายดี", description: "รหัสเกมและไอดีเกมพรีเมียม สต็อกพร้อมส่งทันที", icon: "TrendingUp", imageUrl: "" },
       { id: "cat-2", name: "บัตรเติมเกม & ดิจิทัล", description: "คีย์เกม, บัตรเติมเงิน และบริการดิจิทัลต่าง ๆ", icon: "Gamepad2", imageUrl: "" },
