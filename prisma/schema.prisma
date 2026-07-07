@@ -7,64 +7,63 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Setting {
-  id                         Int      @id @default(1)
-  siteName                   String
-  siteSubtitle               String   @db.Text
-  primaryColor               String
-  themeMode                  String
-  contactFacebook            String
-  contactDiscord             String
-  contactLine                String
-  truewalletPhone            String
-  bankAccountNumber          String?
-  bankAccountName            String?
-  bankName                   String?
-  qrSlipToken                String
-  botCfTurnstileKey          String
-  discordClientId            String
-  discordClientSecret        String
-  banners                    String   @db.Text // JSON string of banners array
-  allowAngpao                Boolean
-  allowQr                    Boolean
-  siteLogoUrl                String?  @db.Text
-  siteBackgroundUrl          String?  @db.Text
-  announcementActive         Boolean?
-  announcementTitle          String?
-  announcementBody           String?  @db.Text
-  announcementImageUrl       String?  @db.Text
+model Settings {
+  id                        String   @id @default("settings")
+  siteName                  String   @db.Text
+  siteSubtitle              String   @db.Text
+  primaryColor              String
+  themeMode                 String
+  contactFacebook           String   @db.Text
+  contactDiscord            String   @db.Text
+  contactLine               String   @db.Text
+  truewalletPhone           String
+  bankAccountNumber         String?
+  bankAccountName           String?
+  bankName                  String?
+  qrSlipToken               String   @db.Text
+  botCfTurnstileKey         String   @db.Text
+  discordClientId           String   @db.Text
+  discordClientSecret       String   @db.Text
+  banners                   Json
+  allowAngpao               Boolean
+  allowQr                   Boolean
+  siteLogoUrl               String?  @db.Text
+  siteBackgroundUrl         String?  @db.Text
+  announcementActive        Boolean?
+  announcementTitle         String?  @db.Text
+  announcementBody          String?  @db.Text
+  announcementImageUrl      String?  @db.Text
   announcementBarActive      Boolean?
-  announcementBarText        String?  @db.Text
-  announcementBarBgColor     String?
-  announcementBarTextColor   String?
-  announcementBarSpeed       Float?
-  announcementBarStyle       String?
-  announcementBarPrefix      String?
-  announcementFloatActive    Boolean?
-  announcementFloatText      String?  @db.Text
-  announcementFloatStyle     String?
-  announcementFloatIcon      String?
-  announcementFloatPosition  String?
-  maintenanceActive          Boolean?
-  maintenanceTitle           String?
-  maintenanceMessage         String?  @db.Text
-  maintenanceEstimatedTime   String?
-  maintenanceAutoOpenTime    String?
-  serverTime                 Float?
-  aboutUsTitle               String?
-  aboutUsBody                String?  @db.Text
-  aboutUsImageUrl            String?  @db.Text
-  portfolios                 String?  @db.LongText // JSON string of portfolios array
-  artisans                   String?  @db.LongText // JSON string of artisans array
-  landmarks                  String?  @db.LongText // JSON string of landmarks array
-  recommendActive            Boolean?
-  recommendTitle             String?
-  recommendSubtitle          String?
-  recommendProductIds        String?  @db.Text // JSON string of recommended IDs
-  seasonalEffect             String?
-  recentOrdersActive         Boolean?
-  recentOrdersStyle          String?
-  recentOrdersSpeed          String?
+  announcementBarText       String?  @db.Text
+  announcementBarBgColor    String?
+  announcementBarTextColor  String?
+  announcementBarSpeed      Float?
+  announcementBarStyle      String?
+  announcementBarPrefix     String?
+  announcementFloatActive   Boolean?
+  announcementFloatText     String?  @db.Text
+  announcementFloatStyle    String?
+  announcementFloatIcon     String?
+  announcementFloatPosition String?
+  maintenanceActive         Boolean?
+  maintenanceTitle          String?  @db.Text
+  maintenanceMessage        String?  @db.Text
+  maintenanceEstimatedTime  String?
+  maintenanceAutoOpenTime   String?
+  aboutUsTitle              String?  @db.Text
+  aboutUsBody               String?  @db.Text
+  aboutUsImageUrl           String?  @db.Text
+  portfolios                Json?
+  artisans                  Json?
+  landmarks                 Json?
+  recommendActive           Boolean?
+  recommendTitle            String?  @db.Text
+  recommendSubtitle         String?  @db.Text
+  recommendProductIds       Json?
+  seasonalEffect            String?
+  recentOrdersActive        Boolean?
+  recentOrdersStyle         String?
+  recentOrdersSpeed         String?
 }
 
 model Category {
@@ -76,18 +75,18 @@ model Category {
 }
 
 model Product {
-  id          String   @id
+  id          String  @id
   categoryId  String
-  name        String   @db.Text
+  name        String  @db.Text
   price       Float
-  description String   @db.LongText
-  imageUrl    String   @db.Text
-  stock       String   @db.LongText // JSON string of stock array
-  timesSold   Int
-  details     String   @db.LongText
-  type        String
-  videoUrl    String?  @db.Text
-  boxItems    String?  @db.LongText // JSON string of BoxItem array
+  description String  @db.Text
+  imageUrl    String  @db.Text
+  stock       Json
+  timesSold   Int     @default(0)
+  details     String  @db.Text
+  type        String  // 'normal' | 'box'
+  videoUrl    String? @db.Text
+  boxItems    Json?
   sellerId    String?
   sellerName  String?
   sellerType  String?
@@ -95,22 +94,22 @@ model Product {
 
 model User {
   id                  String  @id
-  username            String
-  email               String
-  balance             Float
-  role                String
+  username            String  @unique
+  email               String  @unique
+  balance             Float   @default(0)
+  role                String  // 'user' | 'admin' | 'seller_internal' | 'seller_external'
   discordId           String?
   avatarUrl           String? @db.Text
-  password            String?
-  pendingBalance      Float?
-  withdrawableBalance Float?
+  password            String? @db.Text
+  pendingBalance      Float?  @default(0)
+  withdrawableBalance Float?  @default(0)
 }
 
 model Coupon {
   code            String @id
-  discountPercent Float
-  discountBaht    Float
-  usesLeft        Int
+  discountPercent Float  @default(0)
+  discountBaht    Float  @default(0)
+  usesLeft        Int    @default(0)
 }
 
 model Transaction {
@@ -122,11 +121,11 @@ model Transaction {
   details         String  @db.Text
   status          String
   date            String
-  shippingDetails String? @db.LongText // JSON string of shippingDetails
+  shippingDetails Json?
   orderStatus     String?
   trackingNumber  String?
   trackingCarrier String?
-  statusUpdates   String? @db.LongText // JSON string of statusUpdates
+  statusUpdates   Json?
 }
 
 model Review {
@@ -140,64 +139,72 @@ model Review {
   date        String
 }
 
-model SellerVerification {
-  id             String  @id
-  userId         String
-  username       String
-  shopName       String
-  contactDetails String  @db.Text
-  status         String
-  createdAt      String
-  reviewedAt     String?
-  reviewerNotes  String? @db.Text
-}
-
-model Withdrawal {
-  id              String  @id
-  userId          String
-  username        String
-  amount          Float
-  bankName        String
-  bankAccount     String
-  bankAccountName String
-  status          String
-  createdAt       String
-  reviewedAt      String?
-  reviewerNotes   String? @db.Text
-}
-
 model Conversation {
-  id            String @id
-  customerId    String
-  sellerId      String
-  shopId        String
-  lastMessage   String @db.Text
-  lastMessageAt String
-  status        String
-  createdAt     String
+  id                String   @id
+  customerId        String
+  sellerId          String
+  shopId            String
+  lastMessage       String   @db.Text
+  lastMessageAt     String
+  status            String
+  createdAt         String
+  isTypingSeller    Boolean?
+  isTypingCustomer  Boolean?
 }
 
 model Message {
   id             String  @id
   conversationId String
   senderId       String
-  message        String  @db.LongText
+  message        String  @db.Text
   messageType    String
   image          String? @db.Text
-  isRead         Boolean
+  isRead         Boolean @default(false)
   createdAt      String
   replyToId      String?
   replyToMessage String? @db.Text
-  productInfo    String? @db.LongText // JSON string
-  orderInfo      String? @db.LongText // JSON string
-  locationInfo   String? @db.LongText // JSON string
+  productInfo    Json?
+  orderInfo      Json?
+  locationInfo   Json?
 }
 
 model Notification {
   id        String  @id
   userId    String
-  title     String
+  title     String  @db.Text
   body      String  @db.Text
-  isRead    Boolean
+  isRead    Boolean @default(false)
   createdAt String
+}
+
+model SellerVerification {
+  id                String   @id
+  userId            String
+  username          String
+  email             String
+  shopName          String
+  shopDescription   String   @db.Text
+  idCardPhotoUrl    String   @db.Text
+  status            String
+  submittedAt       String
+  bankName          String?
+  bankAccountNumber String?
+  bankAccountName   String?
+  adminNotes        String?  @db.Text
+  reviewedAt        String?
+}
+
+model Withdrawal {
+  id                String   @id
+  userId            String
+  username          String
+  amount            Float
+  bankName          String
+  bankAccountNumber String
+  bankAccountName   String
+  status            String
+  submittedAt       String
+  adminNotes        String?  @db.Text
+  slipUrl           String?  @db.Text
+  reviewedAt        String?
 }
