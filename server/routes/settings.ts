@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma, defaultSettings } from "../db.js";
+import { prisma, defaultSettings, sanitizeSettings, stringifySettings } from "../db.js";
 
 const router = Router();
 
@@ -20,11 +20,11 @@ router.get("/", async (req, res) => {
       settings = await prisma.settings.create({
         data: {
           ...defaultSettings,
-          banners: defaultSettings.banners,
-          portfolios: defaultSettings.portfolios,
-          artisans: defaultSettings.artisans,
-          landmarks: defaultSettings.landmarks,
-          recommendProductIds: defaultSettings.recommendProductIds
+          banners: JSON.stringify(defaultSettings.banners),
+          portfolios: JSON.stringify(defaultSettings.portfolios),
+          artisans: JSON.stringify(defaultSettings.artisans),
+          landmarks: JSON.stringify(defaultSettings.landmarks),
+          recommendProductIds: JSON.stringify(defaultSettings.recommendProductIds)
         } as any
       });
     }
@@ -50,7 +50,7 @@ router.get("/", async (req, res) => {
       }
     }
 
-    res.json({ ...settings, serverTime: Date.now() });
+    res.json({ ...sanitizeSettings(settings), serverTime: Date.now() });
   } catch (err: any) {
     console.error("Error fetching settings:", err);
     res.status(500).json({ error: err.message || "Failed to fetch settings" });
@@ -68,7 +68,7 @@ router.post("/auto-open", async (req, res) => {
         maintenanceAutoOpenTime: ""
       }
     });
-    res.json({ success: true, settings });
+    res.json({ success: true, settings: sanitizeSettings(settings) });
   } catch (err: any) {
     console.error("Error in auto-open endpoint:", err);
     res.status(500).json({ error: err.message || "Failed to auto-open settings" });
@@ -84,18 +84,19 @@ router.put("/", async (req, res) => {
     }
 
     const { id, serverTime, ...updatedData } = req.body;
+    const stringifiedData = stringifySettings(updatedData);
 
     const settings = await prisma.settings.upsert({
       where: { id: "settings" },
       create: {
         id: "settings",
-        ...defaultSettings,
-        ...updatedData
+        ...stringifySettings(defaultSettings),
+        ...stringifiedData
       },
-      update: updatedData
+      update: stringifiedData
     });
 
-    res.json({ message: "Successfully updated settings", settings });
+    res.json({ message: "Successfully updated settings", settings: sanitizeSettings(settings) });
   } catch (err: any) {
     console.error("Error updating settings:", err);
     res.status(500).json({ error: err.message || "Failed to update settings" });

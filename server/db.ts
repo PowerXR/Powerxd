@@ -81,3 +81,63 @@ export async function ensureSettingsSeeded() {
     console.error("Error seeding default settings:", error);
   }
 }
+
+import { parseJSON } from "./lib/json.js";
+import {
+  sanitizeSetting,
+  sanitizeSettings,
+  sanitizeProduct,
+  sanitizeTransaction,
+  sanitizeMessage,
+  sanitizeReview,
+  sanitizeConversation
+} from "./lib/sanitize.js";
+
+export {
+  parseJSON,
+  sanitizeSetting,
+  sanitizeSettings,
+  sanitizeProduct,
+  sanitizeTransaction,
+  sanitizeMessage,
+  sanitizeReview,
+  sanitizeConversation
+};
+
+export function stringifySettings(data: any) {
+  if (!data) return data;
+  const result = { ...data };
+  if (result.banners !== undefined) result.banners = typeof result.banners === "string" ? result.banners : JSON.stringify(result.banners);
+  if (result.portfolios !== undefined) result.portfolios = typeof result.portfolios === "string" ? result.portfolios : JSON.stringify(result.portfolios);
+  if (result.artisans !== undefined) result.artisans = typeof result.artisans === "string" ? result.artisans : JSON.stringify(result.artisans);
+  if (result.landmarks !== undefined) result.landmarks = typeof result.landmarks === "string" ? result.landmarks : JSON.stringify(result.landmarks);
+  if (result.recommendProductIds !== undefined) result.recommendProductIds = typeof result.recommendProductIds === "string" ? result.recommendProductIds : JSON.stringify(result.recommendProductIds);
+  return result;
+}
+
+export function stringifyProduct(data: any) {
+  if (!data) return data;
+  const result = { ...data };
+  if (result.stock !== undefined) result.stock = typeof result.stock === "string" ? result.stock : JSON.stringify(result.stock);
+  if (result.boxItems !== undefined) result.boxItems = typeof result.boxItems === "string" ? result.boxItems : JSON.stringify(result.boxItems);
+  return result;
+}
+
+export function stringifyTransaction(data: any) {
+  if (!data) return data;
+  const result = { ...data };
+  if (result.shippingDetails !== undefined) result.shippingDetails = typeof result.shippingDetails === "string" ? result.shippingDetails : JSON.stringify(result.shippingDetails);
+  if (result.statusUpdates !== undefined) result.statusUpdates = typeof result.statusUpdates === "string" ? result.statusUpdates : JSON.stringify(result.statusUpdates);
+  return result;
+}
+
+export function stringifyMessage(data: any) {
+  if (!data) return data;
+  const result = { ...data };
+  if (result.productInfo !== undefined) result.productInfo = typeof result.productInfo === "string" ? result.productInfo : JSON.stringify(result.productInfo);
+  if (result.orderInfo !== undefined) result.orderInfo = typeof result.orderInfo === "string" ? result.orderInfo : JSON.stringify(result.orderInfo);
+  if (result.locationInfo !== undefined) result.locationInfo = typeof result.locationInfo === "string" ? result.locationInfo : JSON.stringify(result.locationInfo);
+  return result;
+}
+
+

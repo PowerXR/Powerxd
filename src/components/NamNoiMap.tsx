@@ -16,6 +16,7 @@ import {
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { AppSettings } from '../types';
 import { Language, getTranslation } from '../lib/translations';
+import { parseJSON } from '../utils/json';
 
 export interface Landmark {
   id: string;
@@ -106,8 +107,9 @@ function MapCenteringController({ selectedLandmark }: { selectedLandmark: Landma
 }
 
 export default function NamNoiMap({ settings, lang = "th" }: { settings?: AppSettings | null, lang?: Language }) {
-  const landmarks = (settings?.landmarks && settings.landmarks.length > 0)
-    ? settings.landmarks
+  const parsedLandmarks = settings?.landmarks ? parseJSON(settings.landmarks, []) : [];
+  const landmarks = parsedLandmarks.length > 0
+    ? parsedLandmarks
     : defaultLandmarks;
 
   const [selectedLandmark, setSelectedLandmark] = useState<Landmark | null>(landmarks[0] || null);

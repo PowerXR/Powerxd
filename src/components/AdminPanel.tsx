@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AppSettings, Category, Product, User, Coupon, Transaction, Review, Landmark } from "../types";
+import { parseJSON } from "../utils/json";
+import { sanitizeTransaction } from "../utils/sanitize";
 import LucideIcon from "./LucideIcon";
 import { 
   X, LayoutDashboard, Database, FolderHeart, Settings, Ticket, Code, Plus, Edit, Trash, Users, Percent, Gift, FileText, Check, Copy, HelpCircle, Eye, RefreshCw, Truck, Info, Palette, Award,
@@ -537,7 +539,7 @@ export default function AdminPanel({
       });
       if (res.ok) {
         const data = await res.json();
-        setTransactions(data);
+        setTransactions(Array.isArray(data) ? data.map(sanitizeTransaction) : []);
       }
     } catch (err) {
       console.error(err);
@@ -691,7 +693,7 @@ export default function AdminPanel({
   const handlePortfolioSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let updatedPortfolios = [...(editedSettings.portfolios || [])];
+      let updatedPortfolios = [...parseJSON(editedSettings.portfolios, [])];
       if (editingPortfolioId) {
         // Edit existing
         updatedPortfolios = updatedPortfolios.map(p => 
@@ -727,7 +729,7 @@ export default function AdminPanel({
       message: "คุณต้องการลบผลงานนี้ออกจากประวัติร้านค้าใช่หรือไม่?",
       onConfirm: async () => {
         try {
-          const updatedPortfolios = (editedSettings.portfolios || []).filter(p => p.id !== id);
+          const updatedPortfolios = parseJSON(editedSettings.portfolios, []).filter(p => p.id !== id);
           const newSettings = { ...editedSettings, portfolios: updatedPortfolios };
           setEditedSettings(newSettings);
           await onUpdateSettings(newSettings);
@@ -743,7 +745,7 @@ export default function AdminPanel({
   const handleArtisanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let updatedArtisans = [...(editedSettings.artisans || [])];
+      let updatedArtisans = [...parseJSON(editedSettings.artisans, [])];
       if (editingArtisanId) {
         // Edit existing
         updatedArtisans = updatedArtisans.map(a => 
@@ -779,7 +781,7 @@ export default function AdminPanel({
       message: "คุณต้องการลบข้อมูลช่างฝีมือท่านนี้ใช่หรือไม่?",
       onConfirm: async () => {
         try {
-          const updatedArtisans = (editedSettings.artisans || []).filter(a => a.id !== id);
+          const updatedArtisans = parseJSON(editedSettings.artisans, []).filter(a => a.id !== id);
           const newSettings = { ...editedSettings, artisans: updatedArtisans };
           setEditedSettings(newSettings);
           await onUpdateSettings(newSettings);
@@ -795,7 +797,7 @@ export default function AdminPanel({
   const handleLandmarkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let updatedLandmarks = [...(editedSettings.landmarks || [])];
+      let updatedLandmarks = [...parseJSON(editedSettings.landmarks, [])];
       if (editingLandmarkId) {
         // Edit existing
         updatedLandmarks = updatedLandmarks.map(l => 
@@ -831,7 +833,7 @@ export default function AdminPanel({
       message: "คุณต้องการลบข้อมูลสถานที่แนะนำทางวัฒนธรรมแห่งนี้ออกจากแผนที่ใช่หรือไม่?",
       onConfirm: async () => {
         try {
-          const updatedLandmarks = (editedSettings.landmarks || []).filter(l => l.id !== id);
+          const updatedLandmarks = parseJSON(editedSettings.landmarks, []).filter(l => l.id !== id);
           const newSettings = { ...editedSettings, landmarks: updatedLandmarks };
           setEditedSettings(newSettings);
           await onUpdateSettings(newSettings);
@@ -1039,6 +1041,26 @@ export default function AdminPanel({
     preset === 'violet' ? 'bg-violet-500/10 text-violet-400' :
     preset === 'custom' ? 'bg-[var(--custom-accent-bg)] text-[var(--custom-accent)]' :
     'bg-[#8E6D4E]/10 text-[#8E6D4E]';
+
+  const portfolios = Array.isArray(editedSettings.portfolios)
+    ? editedSettings.portfolios
+    : parseJSON(editedSettings.portfolios, []);
+
+  const artisans = Array.isArray(editedSettings.artisans)
+    ? editedSettings.artisans
+    : parseJSON(editedSettings.artisans, []);
+
+  const landmarks = Array.isArray(editedSettings.landmarks)
+    ? editedSettings.landmarks
+    : parseJSON(editedSettings.landmarks, []);
+
+  const banners = Array.isArray(editedSettings.banners)
+    ? editedSettings.banners
+    : parseJSON(editedSettings.banners, []);
+
+  const recommendProductIds = Array.isArray(editedSettings.recommendProductIds)
+    ? editedSettings.recommendProductIds
+    : parseJSON(editedSettings.recommendProductIds, []);
 
   return (
     <div 
@@ -1918,7 +1940,7 @@ export default function AdminPanel({
                   </form>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                    {(editedSettings.portfolios || []).map((port) => (
+                    {portfolios.map((port) => (
                       <div key={port.id} className="bg-slate-950/40 p-3 rounded-2xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-all">
                         {port.imageUrl ? (
                           <img src={port.imageUrl} alt={port.title} className="w-24 h-24 object-cover rounded-xl bg-stone-900 flex-shrink-0 border border-white/5" />
@@ -1951,7 +1973,7 @@ export default function AdminPanel({
                         </div>
                       </div>
                     ))}
-                    {(editedSettings.portfolios || []).length === 0 && (
+                    {portfolios.length === 0 && (
                       <div className="col-span-2 text-center py-10 bg-slate-950/10 border border-dashed border-white/5 rounded-2xl text-slate-500">
                         ยังไม่มีข้อมูลแฟ้มสะสมผลงานในระบบหลังบ้านค่ะ
                       </div>
@@ -2056,7 +2078,7 @@ export default function AdminPanel({
                   </form>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                    {(editedSettings.artisans || []).map((art) => (
+                    {artisans.map((art) => (
                       <div key={art.id} className="bg-slate-950/40 p-3 rounded-2xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-all">
                         {art.imageUrl ? (
                           <img src={art.imageUrl} alt={art.name} className="w-24 h-24 object-cover rounded-xl bg-stone-900 flex-shrink-0 border border-white/5" />
@@ -2090,7 +2112,7 @@ export default function AdminPanel({
                         </div>
                       </div>
                     ))}
-                    {(editedSettings.artisans || []).length === 0 && (
+                    {artisans.length === 0 && (
                       <div className="col-span-2 text-center py-10 bg-slate-950/10 border border-dashed border-white/5 rounded-2xl text-slate-500">
                         ยังไม่มีข้อมูลทำเนียบช่างฝีมือในระบบหลังบ้านค่ะ
                       </div>
@@ -2248,7 +2270,7 @@ export default function AdminPanel({
                   </form>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                    {(editedSettings.landmarks || []).map((loc) => (
+                    {landmarks.map((loc) => (
                       <div key={loc.id} className="bg-slate-950/40 p-3 rounded-2xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-all">
                         {loc.imageUrl ? (
                           <img src={loc.imageUrl} alt={loc.name} className="w-24 h-24 object-cover rounded-xl bg-stone-900 flex-shrink-0 border border-white/5" />
@@ -2296,7 +2318,7 @@ export default function AdminPanel({
                         </div>
                       </div>
                     ))}
-                    {(editedSettings.landmarks || []).length === 0 && (
+                    {landmarks.length === 0 && (
                       <div className="col-span-2 text-center py-10 bg-slate-950/10 border border-dashed border-white/5 rounded-2xl text-slate-500">
                         ยังไม่มีข้อมูลพิกัดสถานที่ท่องเที่ยวในระบบหลังบ้านค่ะ
                       </div>
@@ -2425,7 +2447,7 @@ export default function AdminPanel({
                       {/* Current list of banner images */}
                       <label className="block text-[10px] text-slate-400 font-bold mb-1">📋 รายการภาพสไลด์ที่กำลังใช้งานอยู่ในปัจจุบัน (คลิกลากเพื่อจัดลำดับ/แก้ไขได้ทันที):</label>
                       <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1 scrollbar-thin">
-                        {(editedSettings.banners || []).map((slide, sIdx) => (
+                        {banners.map((slide, sIdx) => (
                           <div key={sIdx} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-950/70 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-all">
                             <div className="flex items-center gap-3 flex-grow">
                               <img src={slide} alt={`Slide ${sIdx+1}`} className="w-16 h-10 object-cover rounded-lg bg-stone-900 flex-shrink-0 shadow border border-white/5" />
@@ -2435,7 +2457,7 @@ export default function AdminPanel({
                                   type="text" 
                                   value={slide} 
                                   onChange={e => {
-                                    const updatedBanners = [...(editedSettings.banners || [])];
+                                    const updatedBanners = [...parseJSON(editedSettings.banners, [])];
                                     updatedBanners[sIdx] = e.target.value;
                                     setEditedSettings({...editedSettings, banners: updatedBanners});
                                   }}
@@ -2468,7 +2490,7 @@ export default function AdminPanel({
                                         });
                                         if (res.ok) {
                                           const data = await res.json();
-                                          const updatedBanners = [...(editedSettings.banners || [])];
+                                          const updatedBanners = [...parseJSON(editedSettings.banners, [])];
                                           updatedBanners[sIdx] = data.url;
                                           setEditedSettings({...editedSettings, banners: updatedBanners});
                                         } else {
@@ -2486,7 +2508,7 @@ export default function AdminPanel({
                               <button 
                                 type="button"
                                 onClick={() => {
-                                  const updatedBanners = (editedSettings.banners || []).filter((_, bIdx) => bIdx !== sIdx);
+                                  const updatedBanners = parseJSON(editedSettings.banners, []).filter((_, bIdx) => bIdx !== sIdx);
                                   setEditedSettings({...editedSettings, banners: updatedBanners});
                                 }}
                                 className="px-2.5 py-1.5 bg-red-950/30 hover:bg-red-950/70 border border-red-500/20 text-red-400 hover:text-white rounded-lg text-[9px] font-bold transition-all cursor-pointer"
@@ -2497,7 +2519,7 @@ export default function AdminPanel({
                             </div>
                           </div>
                         ))}
-                        {(editedSettings.banners || []).length === 0 && (
+                        {banners.length === 0 && (
                           <p className="text-[10px] text-slate-500 py-4 text-center border border-dashed border-white/5 rounded-xl">ไม่มีรูปภาพสไลด์ กรุณาป้อนลิงก์ด้านล่างเพื่อเพิ่มภาพแบนเนอร์แสดงหน้าแรกนะคะ</p>
                         )}
                       </div>
@@ -2521,7 +2543,7 @@ export default function AdminPanel({
                                 alert("กรุณากรอกลิงก์ที่อยู่รูปภาพหรือแนบรูปไฟล์อัปโหลดก่อนกดเพิ่มนะคะ!");
                                 return;
                               }
-                              const updatedBanners = [...(editedSettings.banners || []), url];
+                              const updatedBanners = [...parseJSON(editedSettings.banners, []), url];
                               setEditedSettings({...editedSettings, banners: updatedBanners});
                               setNewSlideUrl("");
                             }}
@@ -2546,7 +2568,7 @@ export default function AdminPanel({
                                 key={pIdx}
                                 type="button"
                                 onClick={() => {
-                                  const updatedBanners = [...(editedSettings.banners || []), presetItem.url];
+                                  const updatedBanners = [...parseJSON(editedSettings.banners, []), presetItem.url];
                                   setEditedSettings({...editedSettings, banners: updatedBanners});
                                 }}
                                 className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[8.5px] text-slate-300 border border-white/5 transition-all text-center cursor-pointer font-medium truncate"
@@ -3163,7 +3185,7 @@ export default function AdminPanel({
                             <label className="block text-[10px] text-slate-400 font-bold mb-1.5">🎯 เลือกสินค้าที่ต้องการแนะนำ (คลิกเพื่อเลือก/ยกเลิกนำขึ้นสไลเดอร์แนะนำสินค้า):</label>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
                               {products.map((prod) => {
-                                const currentRecs = editedSettings.recommendProductIds || [];
+                                const currentRecs = recommendProductIds;
                                 const isSelected = currentRecs.includes(prod.id);
                                 return (
                                   <div 
@@ -3198,7 +3220,7 @@ export default function AdminPanel({
                                 );
                               })}
                             </div>
-                            <span className="text-[9px] text-stone-500 block mt-1.5">มีทั้งหมด {products.length} รายการ | แนะนำสินค้าไปแล้ว {(editedSettings.recommendProductIds || []).length} รายการ</span>
+                            <span className="text-[9px] text-stone-500 block mt-1.5">มีทั้งหมด {products.length} รายการ | แนะนำสินค้าไปแล้ว {recommendProductIds.length} รายการ</span>
                           </div>
                         </div>
                       )}

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "../db.js";
+import { prisma, sanitizeMessage, stringifyMessage } from "../db.js";
 import { broadcastChatEvent } from "../sse.js";
 
 const router = Router();
@@ -147,12 +147,7 @@ router.get("/conversations/:id/messages", async (req, res) => {
       orderBy: { createdAt: "asc" }
     });
 
-    const formatted = messages.map((m) => ({
-      ...m,
-      productInfo: typeof m.productInfo === "string" ? JSON.parse(m.productInfo) : m.productInfo,
-      orderInfo: typeof m.orderInfo === "string" ? JSON.parse(m.orderInfo) : m.orderInfo,
-      locationInfo: typeof m.locationInfo === "string" ? JSON.parse(m.locationInfo) : m.locationInfo
-    }));
+    const formatted = messages.map((m) => sanitizeMessage(m));
 
     res.json(formatted);
   } catch (err: any) {
@@ -192,6 +187,12 @@ router.post("/conversations/:id/messages", async (req, res) => {
       locationInfo
     } = req.body;
 
+    const stringifiedMsg = stringifyMessage({
+      productInfo,
+      orderInfo,
+      locationInfo
+    });
+
     const msgId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     const newMsg = await prisma.message.create({
@@ -206,9 +207,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
         createdAt: new Date().toISOString(),
         replyToId: replyToId || null,
         replyToMessage: replyToMessage || null,
-        productInfo: productInfo ? productInfo : null,
-        orderInfo: orderInfo ? orderInfo : null,
-        locationInfo: locationInfo ? locationInfo : null
+        ...stringifiedMsg
       }
     });
 
@@ -233,12 +232,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
       broadcastChatEvent({ type: "conversation_status_updated", conversationId: conv.id, status: "active" });
     }
 
-    const formattedMsg = {
-      ...newMsg,
-      productInfo,
-      orderInfo,
-      locationInfo
-    };
+    const formattedMsg = sanitizeMessage(newMsg);
 
     broadcastChatEvent({ type: "chat_message", message: formattedMsg });
 

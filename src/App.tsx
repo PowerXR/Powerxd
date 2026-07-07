@@ -1,6 +1,8 @@
 import React, { useState, useEffect, CSSProperties } from "react";
 import { AppSettings, Category, Product, User, Coupon, Transaction, Review } from "./types";
 import { Language, getTranslation } from "./lib/translations";
+import { sanitizeSetting, sanitizeProduct } from "./utils/sanitize";
+import { parseJSON } from "./utils/json";
 import Header from "./components/Header";
 import Banners from "./components/Banners";
 import CategoriesAndProducts from "./components/CategoriesAndProducts";
@@ -211,13 +213,13 @@ export default function App() {
   // Load backend variables
   const loadStoreData = async (roleOverride?: string) => {
     const settingsData = await safeFetch("/api/settings");
-    if (settingsData) setSettings(settingsData);
+    if (settingsData) setSettings(sanitizeSetting(settingsData));
     
     const catData = await safeFetch("/api/categories");
     if (catData) setCategories(catData);
 
     const prodData = await safeFetch("/api/products");
-    if (prodData) setProducts(prodData);
+    if (prodData) setProducts((prodData || []).map(sanitizeProduct));
 
     const activeRole = roleOverride || user?.role || "user";
     const coupData = await safeFetch("/api/coupons", {
@@ -627,7 +629,7 @@ export default function App() {
       }
       const data = JSON.parse(text);
       if (res.ok) {
-        setSettings(data.settings);
+        setSettings(sanitizeSetting(data.settings));
         if (data.settings && data.settings.announcementActive) {
           sessionStorage.removeItem("hasSeenAnnouncement");
           setAnnouncementOpen(true);
@@ -688,6 +690,18 @@ export default function App() {
 
   const activeAccent = "text-[var(--primary-accent)] hover:text-[var(--primary-hover)]";
   const glowBorder = "border-[var(--primary-accent)]/20 shadow-[0_0_20px_var(--primary-accent-glow)]";
+
+  const portfolios = settings && Array.isArray(settings.portfolios)
+    ? settings.portfolios
+    : parseJSON(settings?.portfolios, []);
+
+  const artisans = settings && Array.isArray(settings.artisans)
+    ? settings.artisans
+    : parseJSON(settings?.artisans, []);
+
+  const recommendProductIds = settings && Array.isArray(settings.recommendProductIds)
+    ? settings.recommendProductIds
+    : parseJSON(settings?.recommendProductIds, []);
 
   return (
     <div 
@@ -1144,7 +1158,7 @@ export default function App() {
           {settings && settings.recommendActive && (
             <RecommendedSlider
               products={products}
-              recommendProductIds={settings.recommendProductIds || []}
+              recommendProductIds={recommendProductIds}
               lang={lang}
               onSelectProduct={(p) => setSelectedProduct(p)}
               onAddToCart={handleAddToCart}
@@ -1210,14 +1224,14 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(settings.portfolios || []).map((port) => (
+              {portfolios.map((port) => (
                 <div 
                   key={port.id} 
                   className="group bg-white dark:bg-[#1A1613] rounded-2xl overflow-hidden border border-[#8E6D4E]/10 hover:border-[#8E6D4E]/30 transition-all duration-300 hover:shadow-md flex flex-col"
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-900 border-b border-[#8E6D4E]/10">
                     <img 
-                      src={port.imageUrl || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800"} 
+                       src={port.imageUrl || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800"} 
                       alt={port.title}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
@@ -1235,7 +1249,7 @@ export default function App() {
                   </div>
                 </div>
               ))}
-              {(settings.portfolios || []).length === 0 && (
+              {portfolios.length === 0 && (
                 <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-12 bg-[#FAF7F2]/50 dark:bg-[#161311] rounded-2xl border border-dashed border-[#8E6D4E]/20 text-stone-500 text-xs">
                   {getTranslation(lang, "emptyPortfolios")}
                 </div>
@@ -1259,7 +1273,7 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {(settings.artisans || []).map((art) => (
+              {artisans.map((art) => (
                 <div 
                   key={art.id} 
                   className="bg-[#FAF7F2] dark:bg-[#1C1815] p-6 rounded-2xl border border-[#8E6D4E]/10 hover:border-[#8E6D4E]/30 transition-all duration-300 flex flex-col sm:flex-row gap-5 items-center sm:items-start"
@@ -1287,7 +1301,7 @@ export default function App() {
                   </div>
                 </div>
               ))}
-              {(settings.artisans || []).length === 0 && (
+              {artisans.length === 0 && (
                 <div className="col-span-1 md:col-span-2 text-center py-12 bg-[#FAF7F2]/50 dark:bg-[#161311] rounded-2xl border border-dashed border-[#8E6D4E]/20 text-stone-500 text-xs">
                   {getTranslation(lang, "emptyArtisans")}
                 </div>

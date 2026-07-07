@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "../db.js";
+import { prisma, sanitizeSettings, stringifySettings, stringifyProduct, stringifyTransaction, stringifyMessage } from "../db.js";
 
 const router = Router();
 
@@ -229,35 +229,34 @@ router.post("/restore", async (req, res) => {
     console.log("Beginning bulk restoration of database tables...");
 
     // Helper function to safely bulk restore a model
-    const restoreTable = async (model: any, list: any[]) => {
+    const restoreTable = async (model: any, list: any[], stringifier?: (data: any) => any) => {
       if (Array.isArray(list)) {
         await model.deleteMany();
         for (const item of list) {
           // Normalize json fields
-          const cleanItem = { ...item };
-          // Keep JSON structures unmodified if already object/array, stringify if needed
+          const cleanItem = stringifier ? stringifier(item) : { ...item };
           await model.create({ data: cleanItem });
         }
       }
     };
 
     // Restore tables in dependencies order
-    if (backupData.settings) await restoreTable(prisma.settings, backupData.settings);
+    if (backupData.settings) await restoreTable(prisma.settings, backupData.settings, stringifySettings);
     if (backupData.categories) await restoreTable(prisma.category, backupData.categories);
     if (backupData.users) await restoreTable(prisma.user, backupData.users);
-    if (backupData.products) await restoreTable(prisma.product, backupData.products);
+    if (backupData.products) await restoreTable(prisma.product, backupData.products, stringifyProduct);
     if (backupData.coupons) await restoreTable(prisma.coupon, backupData.coupons);
-    if (backupData.transactions) await restoreTable(prisma.transaction, backupData.transactions);
+    if (backupData.transactions) await restoreTable(prisma.transaction, backupData.transactions, stringifyTransaction);
     if (backupData.reviews) await restoreTable(prisma.review, backupData.reviews);
     if (backupData.conversations) await restoreTable(prisma.conversation, backupData.conversations);
-    if (backupData.messages) await restoreTable(prisma.message, backupData.messages);
+    if (backupData.messages) await restoreTable(prisma.message, backupData.messages, stringifyMessage);
     if (backupData.notifications) await restoreTable(prisma.notification, backupData.notifications);
     if (backupData.sellerVerifications) await restoreTable(prisma.sellerVerification, backupData.sellerVerifications);
     if (backupData.withdrawals) await restoreTable(prisma.withdrawal, backupData.withdrawals);
 
     const latestSettings = await prisma.settings.findUnique({ where: { id: "settings" } });
 
-    res.json({ message: "กู้คืนระบบตารางทั้งหมดสำเร็จแล้ว!", settings: latestSettings });
+    res.json({ message: "กู้คืนระบบตารางทั้งหมดสำเร็จแล้ว!", settings: sanitizeSettings(latestSettings) });
   } catch (err: any) {
     console.error("Error restoring database backup:", err);
     res.status(500).json({ error: err.message || "Failed to restore database backup" });

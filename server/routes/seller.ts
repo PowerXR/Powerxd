@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "../db.js";
+import { prisma, sanitizeTransaction, sanitizeProduct, stringifyProduct } from "../db.js";
 
 const router = Router();
 
@@ -149,11 +149,7 @@ router.get("/products", async (req, res) => {
       where: { sellerId: userId }
     });
 
-    const formatted = products.map((p) => ({
-      ...p,
-      stock: typeof p.stock === "string" ? JSON.parse(p.stock) : (p.stock || []),
-      boxItems: typeof p.boxItems === "string" ? JSON.parse(p.boxItems) : (p.boxItems || [])
-    }));
+    const formatted = products.map((p) => sanitizeProduct(p));
 
     res.json(formatted);
   } catch (err: any) {
@@ -185,27 +181,29 @@ router.post("/products", async (req, res) => {
     }
 
     const prodId = `prod-sl-${Date.now()}`;
-    const newProd = await prisma.product.create({
-      data: {
-        id: prodId,
-        categoryId,
-        name,
-        price: Number(price),
-        description: description || "",
-        imageUrl: imageUrl || "",
-        stock: Array.isArray(stock) ? stock : [],
-        timesSold: 0,
-        details: details || "",
-        type: type || "normal",
-        videoUrl: videoUrl || "",
-        boxItems: [],
-        sellerId: userId,
-        sellerName: verification?.shopName || "ผู้ขายอิสระ",
-        sellerType: "community"
-      }
+    const productData = stringifyProduct({
+      id: prodId,
+      categoryId,
+      name,
+      price: Number(price),
+      description: description || "",
+      imageUrl: imageUrl || "",
+      stock: Array.isArray(stock) ? stock : [],
+      timesSold: 0,
+      details: details || "",
+      type: type || "normal",
+      videoUrl: videoUrl || "",
+      boxItems: [],
+      sellerId: userId,
+      sellerName: verification?.shopName || "ผู้ขายอิสระ",
+      sellerType: "community"
     });
 
-    res.json({ success: true, message: "เพิ่มรายการสินค้าสำเร็จเรียบร้อยแล้ว!", product: newProd });
+    const newProd = await prisma.product.create({
+      data: productData
+    });
+
+    res.json({ success: true, message: "เพิ่มรายการสินค้าสำเร็จเรียบร้อยแล้ว!", product: sanitizeProduct(newProd) });
   } catch (err: any) {
     console.error("Error creating seller product:", err);
     res.status(500).json({ error: err.message || "Failed to create seller product" });
@@ -257,11 +255,7 @@ router.get("/orders", async (req, res) => {
       orderBy: { date: "desc" }
     });
 
-    const formatted = txs.map((t) => ({
-      ...t,
-      shippingDetails: typeof t.shippingDetails === "string" ? JSON.parse(t.shippingDetails) : t.shippingDetails,
-      statusUpdates: typeof t.statusUpdates === "string" ? JSON.parse(t.statusUpdates) : t.statusUpdates
-    }));
+    const formatted = txs.map((t) => sanitizeTransaction(t));
 
     res.json(formatted);
   } catch (err: any) {
@@ -286,7 +280,8 @@ router.post("/orders/:id/ship", async (req, res) => {
       return res.status(404).json({ error: "ไม่พบข้อมูลคำสั่งซื้อที่ระบุ" });
     }
 
-    const statusUpdates = typeof tx.statusUpdates === "string" ? JSON.parse(tx.statusUpdates) : (tx.statusUpdates as any[] || []);
+    const sanitizedTx = sanitizeTransaction(tx);
+    const statusUpdates = sanitizedTx.statusUpdates || [];
 
     statusUpdates.push({
       status: "shipped",
@@ -300,18 +295,14 @@ router.post("/orders/:id/ship", async (req, res) => {
         orderStatus: "shipped",
         trackingCarrier: trackingCarrier || tx.trackingCarrier,
         trackingNumber: trackingNumber || tx.trackingNumber,
-        statusUpdates: statusUpdates
+        statusUpdates: JSON.stringify(statusUpdates)
       }
     });
 
     res.json({
       success: true,
       message: "อัปเดตสเตตัสพัสดุและจัดส่งสำเร็จ!",
-      transaction: {
-        ...updated,
-        shippingDetails: typeof updated.shippingDetails === "string" ? JSON.parse(updated.shippingDetails) : updated.shippingDetails,
-        statusUpdates: typeof updated.statusUpdates === "string" ? JSON.parse(updated.statusUpdates) : updated.statusUpdates
-      }
+      transaction: sanitizeTransaction(updated)
     });
   } catch (err: any) {
     console.error("Error marking order as shipped:", err);
@@ -341,8 +332,8 @@ router.post("/orders/:id/deliver", async (req, res) => {
       return res.status(403).json({ error: "คุณไม่มีส่วนเกี่ยวข้องในคำสั่งซื้อนี้ หรือไม่มีสิทธิ์ปล่อยวงเงินโอนชำระสินค้าให้ผู้ขาย" });
     }
 
-    // Retrieve status updates
-    const statusUpdates = typeof tx.statusUpdates === "string" ? JSON.parse(tx.statusUpdates) : (tx.statusUpdates as any[] || []);
+    const sanitizedTx = sanitizeTransaction(tx);
+    const statusUpdates = sanitizedTx.statusUpdates || [];
 
     statusUpdates.push({
       status: "delivered",
@@ -359,7 +350,7 @@ router.post("/orders/:id/deliver", async (req, res) => {
       where: { id: tx.id },
       data: {
         orderStatus: "delivered",
-        statusUpdates: statusUpdates
+        statusUpdates: JSON.stringify(statusUpdates)
       }
     });
 
@@ -400,11 +391,7 @@ router.post("/orders/:id/deliver", async (req, res) => {
     res.json({
       success: true,
       message: "ยืนยันรับสินค้าและปล่อยกองเงินโอน Escrow ให้ผู้จำหน่ายสำเร็จ!",
-      transaction: {
-        ...updatedTx,
-        shippingDetails: typeof updatedTx.shippingDetails === "string" ? JSON.parse(updatedTx.shippingDetails) : updatedTx.shippingDetails,
-        statusUpdates: typeof updatedTx.statusUpdates === "string" ? JSON.parse(updatedTx.statusUpdates) : updatedTx.statusUpdates
-      }
+      transaction: sanitizeTransaction(updatedTx)
     });
   } catch (err: any) {
     console.error("Error executing escrow delivery/release:", err);

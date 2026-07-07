@@ -3,6 +3,7 @@ import { User, Transaction, AppSettings, Review } from "../types";
 import { X, Calendar, DollarSign, Gift, Star, Clock, ShoppingBag, Eye, HeartHandshake, Truck, CheckCircle2, Copy, Cpu, Key, ShieldCheck, AlertCircle, MapPin, Activity, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Language, getTranslation } from "../lib/translations";
+import { sanitizeTransaction } from "../utils/sanitize";
 
 interface HistoryModalProps {
   user: User;
@@ -96,7 +97,7 @@ export default function HistoryModal({
       const text = await res.text();
       if (text && !text.trim().startsWith("<")) {
         const data = JSON.parse(text);
-        setTxs(data);
+        setTxs(Array.isArray(data) ? data.map(sanitizeTransaction) : []);
       } else {
         console.warn("Invalid non-JSON transactions data returned", text.slice(0, 100));
       }

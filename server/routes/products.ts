@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "../db.js";
+import { prisma, sanitizeProduct, stringifyProduct } from "../db.js";
 import { broadcastPurchase } from "../sse.js";
 
 const router = Router();
@@ -8,12 +8,7 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
-    // Ensure stock and boxItems are properly structured arrays in response
-    const formatted = products.map((p) => ({
-      ...p,
-      stock: typeof p.stock === "string" ? JSON.parse(p.stock) : (p.stock || []),
-      boxItems: typeof p.boxItems === "string" ? JSON.parse(p.boxItems) : (p.boxItems || [])
-    }));
+    const formatted = products.map((p) => sanitizeProduct(p));
     res.json(formatted);
   } catch (err: any) {
     console.error("Error fetching products:", err);
@@ -50,27 +45,29 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Missing required product fields" });
     }
 
-    const product = await prisma.product.create({
-      data: {
-        id,
-        categoryId,
-        name,
-        price: Number(price),
-        description: description || "",
-        imageUrl: imageUrl || "",
-        stock: Array.isArray(stock) ? stock : [],
-        timesSold: 0,
-        details: details || "",
-        type: type || "normal",
-        videoUrl: videoUrl || "",
-        boxItems: Array.isArray(boxItems) ? boxItems : [],
-        sellerId: sellerId || null,
-        sellerName: sellerName || null,
-        sellerType: sellerType || null
-      }
+    const productData = stringifyProduct({
+      id,
+      categoryId,
+      name,
+      price: Number(price),
+      description: description || "",
+      imageUrl: imageUrl || "",
+      stock: Array.isArray(stock) ? stock : [],
+      timesSold: 0,
+      details: details || "",
+      type: type || "normal",
+      videoUrl: videoUrl || "",
+      boxItems: Array.isArray(boxItems) ? boxItems : [],
+      sellerId: sellerId || null,
+      sellerName: sellerName || null,
+      sellerType: sellerType || null
     });
 
-    res.status(201).json(product);
+    const product = await prisma.product.create({
+      data: productData
+    });
+
+    res.status(201).json(sanitizeProduct(product));
   } catch (err: any) {
     console.error("Error creating product:", err);
     res.status(500).json({ error: err.message || "Failed to create product" });
@@ -112,26 +109,28 @@ router.put("/:id", async (req, res) => {
       sellerType
     } = req.body;
 
-    const updated = await prisma.product.update({
-      where: { id: req.params.id },
-      data: {
-        categoryId,
-        name,
-        price: price !== undefined ? Number(price) : undefined,
-        description,
-        imageUrl,
-        stock: Array.isArray(stock) ? stock : undefined,
-        details,
-        type,
-        videoUrl,
-        boxItems: Array.isArray(boxItems) ? boxItems : undefined,
-        sellerId,
-        sellerName,
-        sellerType
-      }
+    const updateData = stringifyProduct({
+      categoryId,
+      name,
+      price: price !== undefined ? Number(price) : undefined,
+      description,
+      imageUrl,
+      stock: Array.isArray(stock) ? stock : undefined,
+      details,
+      type,
+      videoUrl,
+      boxItems: Array.isArray(boxItems) ? boxItems : undefined,
+      sellerId,
+      sellerName,
+      sellerType
     });
 
-    res.json(updated);
+    const updated = await prisma.product.update({
+      where: { id: req.params.id },
+      data: updateData
+    });
+
+    res.json(sanitizeProduct(updated));
   } catch (err: any) {
     console.error("Error updating product:", err);
     res.status(500).json({ error: err.message || "Failed to update product" });
@@ -195,7 +194,8 @@ router.post("/:id/purchase", async (req, res) => {
         throw new Error("ไม่พบสินค้าชิ้นนี้");
       }
 
-      const stockList: string[] = typeof product.stock === "string" ? JSON.parse(product.stock) : (product.stock as string[] || []);
+      const sanitizedProduct = sanitizeProduct(product);
+      const stockList: string[] = sanitizedProduct.stock;
 
       if (stockList.length < 1) {
         throw new Error("สินค้าชิ้นนี้หมดชั่วคราว");
@@ -251,7 +251,7 @@ router.post("/:id/purchase", async (req, res) => {
       let rewardDetails = "";
       let alertTitle = "ซื้อสินค้าสำเร็จ!";
 
-      const boxItemsList: any[] = typeof product.boxItems === "string" ? JSON.parse(product.boxItems) : (product.boxItems as any[] || []);
+      const boxItemsList = sanitizedProduct.boxItems;
 
       if (product.type === "box" && boxItemsList.length > 0) {
         // Pick a random prize based on percentages
@@ -282,7 +282,7 @@ router.post("/:id/purchase", async (req, res) => {
       await tx.product.update({
         where: { id: product.id },
         data: {
-          stock: stockList,
+          stock: JSON.stringify(stockList),
           timesSold: product.timesSold + 1
         }
       });
@@ -315,17 +315,17 @@ router.post("/:id/purchase", async (req, res) => {
           details: `${product.type === "box" ? "สุ่มกล่อง" : "ซื้อสินค้าจัดส่ง"} [${product.name}] - ${rewardDetails} ${couponDetails}${shippingDetailsText}`,
           status: "success",
           date: new Date().toISOString(),
-          shippingDetails: hasShipping ? shippingDetails : null,
+          shippingDetails: hasShipping ? JSON.stringify(shippingDetails) : null,
           orderStatus: hasShipping ? "preparing" : null,
           trackingNumber: "",
           trackingCarrier: "",
-          statusUpdates: hasShipping ? [
+          statusUpdates: hasShipping ? JSON.stringify([
             {
               status: "preparing",
               date: new Date().toISOString(),
               note: "ร้านค้าได้รับคำสั่งซื้อและกำลังเริ่มจัดเตรียมพัสดุของคุณ"
             }
-          ] : null
+          ]) : null
         }
       });
 
@@ -398,7 +398,8 @@ router.post("/checkout", async (req, res) => {
           throw new Error(`ไม่พบสินค้าที่มีรหัส ${cartItem.productId} ในระบบ`);
         }
         const quantity = Number(cartItem.quantity) || 1;
-        const stockList: string[] = typeof product.stock === "string" ? JSON.parse(product.stock) : (product.stock as string[] || []);
+        const sanitizedProduct = sanitizeProduct(product);
+        const stockList: string[] = sanitizedProduct.stock;
 
         if (stockList.length < quantity) {
           throw new Error(`สินค้า [${product.name}] มีสินค้าคงเหลือไม่เพียงพอ (คงเหลือ ${stockList.length} ชิ้น)`);
@@ -466,7 +467,7 @@ router.post("/checkout", async (req, res) => {
         await tx.product.update({
           where: { id: product.id },
           data: {
-            stock: stockList,
+            stock: JSON.stringify(stockList),
             timesSold: product.timesSold + quantity
           }
         });
@@ -504,17 +505,17 @@ router.post("/checkout", async (req, res) => {
           details: `ซื้อสินค้าจากตะกร้า: ${purchasedSummary.join(", ")} - รายละเอียดสินค้า: ${rewardsList.join(" | ")} ${couponDetails}${shippingDetailsText}`,
           status: "success",
           date: new Date().toISOString(),
-          shippingDetails: hasShipping ? shippingDetails : null,
+          shippingDetails: hasShipping ? JSON.stringify(shippingDetails) : null,
           orderStatus: hasShipping ? "preparing" : null,
           trackingNumber: "",
           trackingCarrier: "",
-          statusUpdates: hasShipping ? [
+          statusUpdates: hasShipping ? JSON.stringify([
             {
               status: "preparing",
               date: new Date().toISOString(),
               note: "ร้านค้าได้รับคำสั่งซื้อจากตะกร้าสินค้าเรียบร้อยแล้ว และกำลังเตรียมจัดส่งพัสดุของคุณ"
             }
-          ] : null
+          ]) : null
         }
       });
 

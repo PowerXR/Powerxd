@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "../db.js";
+import { prisma, sanitizeTransaction } from "../db.js";
 
 const router = Router();
 
@@ -36,11 +36,7 @@ router.get("/", async (req, res) => {
       });
     }
 
-    const formatted = txs.map((t) => ({
-      ...t,
-      shippingDetails: typeof t.shippingDetails === "string" ? JSON.parse(t.shippingDetails) : t.shippingDetails,
-      statusUpdates: typeof t.statusUpdates === "string" ? JSON.parse(t.statusUpdates) : t.statusUpdates
-    }));
+    const formatted = txs.map((t) => sanitizeTransaction(t));
 
     res.json(formatted);
   } catch (err: any) {
@@ -64,7 +60,8 @@ router.put("/:id/tracking", async (req, res) => {
       return res.status(404).json({ error: "ไม่พบข้อมูลรหัสธุรกรรมนี้" });
     }
 
-    const statusUpdates = typeof tx.statusUpdates === "string" ? JSON.parse(tx.statusUpdates) : (tx.statusUpdates as any[] || []);
+    const sanitizedTx = sanitizeTransaction(tx);
+    const statusUpdates = sanitizedTx.statusUpdates || [];
     const updatedStatus = orderStatus || tx.orderStatus || "preparing";
 
     statusUpdates.push({
@@ -79,18 +76,14 @@ router.put("/:id/tracking", async (req, res) => {
         trackingNumber: trackingNumber || tx.trackingNumber,
         trackingCarrier: trackingCarrier || tx.trackingCarrier,
         orderStatus: updatedStatus,
-        statusUpdates: statusUpdates
+        statusUpdates: JSON.stringify(statusUpdates)
       }
     });
 
     res.json({
       success: true,
       message: "อัปเดตข้อมูลการจัดส่งสำเร็จ",
-      transaction: {
-        ...updatedTx,
-        shippingDetails: typeof updatedTx.shippingDetails === "string" ? JSON.parse(updatedTx.shippingDetails) : updatedTx.shippingDetails,
-        statusUpdates: typeof updatedTx.statusUpdates === "string" ? JSON.parse(updatedTx.statusUpdates) : updatedTx.statusUpdates
-      }
+      transaction: sanitizeTransaction(updatedTx)
     });
   } catch (err: any) {
     console.error("Error updating transaction tracking:", err);
