@@ -4,12 +4,13 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppSettings, Category, Product, User, Coupon, Transaction, Review, BoxItem, Conversation, Message, Notification } from "./src/types";
+import { loadFromPrisma, saveToPrisma } from "./src/lib/prisma-sync";
 
 // Database storage setup
 const DB_FILE = path.join(process.cwd(), "db.json");
 
 // Helper to load DB
-function loadDB() {
+async function loadDB() {
   const defaultDB = {
     settings: {
         "siteName": "ชุมชนตำบลน้ำน้อย",
@@ -220,47 +221,14 @@ function loadDB() {
     ] as Review[]
   };
 
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const data = JSON.parse(fs.readFileSync(DB_FILE, "utf-8"));
-      // Merge new default settings fields if missing
-      if (data.settings) {
-        if (!data.settings.aboutUsTitle) {
-          data.settings.aboutUsTitle = defaultDB.settings.aboutUsTitle;
-          data.settings.aboutUsBody = defaultDB.settings.aboutUsBody;
-          data.settings.aboutUsImageUrl = defaultDB.settings.aboutUsImageUrl;
-        }
-        if (!data.settings.portfolios) {
-          data.settings.portfolios = defaultDB.settings.portfolios;
-        }
-        if (!data.settings.artisans) {
-          data.settings.artisans = defaultDB.settings.artisans;
-        }
-        if (!data.settings.landmarks) {
-          data.settings.landmarks = defaultDB.settings.landmarks;
-        }
-      }
-      if (!data.conversations) data.conversations = [];
-      if (!data.messages) data.messages = [];
-      if (!data.notifications) data.notifications = [];
-      return data;
-    } else {
-      fs.writeFileSync(DB_FILE, JSON.stringify(defaultDB, null, 2), "utf-8");
-      return defaultDB;
-    }
-  } catch (err) {
-    console.error("Error reading database file", err);
-    return defaultDB;
-  }
+  return await loadFromPrisma(defaultDB);
 }
 
 // Helper to save DB
 function saveDB(data: any) {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Error writing to database file", err);
-  }
+  saveToPrisma(data).catch((err) => {
+    console.error("Asynchronous background save to Prisma failed:", err);
+  });
 }
 
 async function startServer() {
@@ -268,7 +236,7 @@ async function startServer() {
   const PORT = 3000;
 
   // Initial local copy of dynamic DB
-  let db = loadDB();
+  let db = await loadDB();
 
   // Real-time SSE Clients for live purchase notifications
   let sseClients: any[] = [];
