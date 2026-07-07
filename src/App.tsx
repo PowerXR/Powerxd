@@ -203,7 +203,11 @@ export default function App() {
         console.warn(`URL ${url} returned HTML or empty page instead of JSON:`, text.slice(0, 100));
         return null;
       }
-      return JSON.parse(text);
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === "object" && parsed.success !== undefined && parsed.data !== undefined) {
+        return parsed.data;
+      }
+      return parsed;
     } catch (e) {
       console.error(`safeFetch failed for ${url}:`, e);
       return null;
@@ -213,22 +217,49 @@ export default function App() {
   // Load backend variables
   const loadStoreData = async (roleOverride?: string) => {
     const settingsData = await safeFetch("/api/settings");
-    if (settingsData) setSettings(sanitizeSetting(settingsData));
+    if (settingsData) {
+      const parsedSettings = (settingsData && typeof settingsData === "object" && "settings" in settingsData) ? (settingsData as any).settings : settingsData;
+      setSettings(sanitizeSetting(parsedSettings));
+    }
     
     const catData = await safeFetch("/api/categories");
-    if (catData) setCategories(catData);
+    if (catData && Array.isArray(catData)) {
+      setCategories(catData);
+    } else if (catData && typeof catData === "object" && Array.isArray((catData as any).data)) {
+      setCategories((catData as any).data);
+    } else {
+      setCategories([]);
+    }
 
     const prodData = await safeFetch("/api/products");
-    if (prodData) setProducts((prodData || []).map(sanitizeProduct));
+    if (prodData && Array.isArray(prodData)) {
+      setProducts(prodData.map(sanitizeProduct));
+    } else if (prodData && typeof prodData === "object" && Array.isArray((prodData as any).data)) {
+      setProducts((prodData as any).data.map(sanitizeProduct));
+    } else {
+      setProducts([]);
+    }
 
     const activeRole = roleOverride || user?.role || "user";
     const coupData = await safeFetch("/api/coupons", {
       headers: { "X-User-Role": activeRole }
     });
-    if (coupData) setCoupons(coupData);
+    if (coupData && Array.isArray(coupData)) {
+      setCoupons(coupData);
+    } else if (coupData && typeof coupData === "object" && Array.isArray((coupData as any).data)) {
+      setCoupons((coupData as any).data);
+    } else {
+      setCoupons([]);
+    }
 
     const revData = await safeFetch("/api/reviews");
-    if (revData) setReviews(revData);
+    if (revData && Array.isArray(revData)) {
+      setReviews(revData);
+    } else if (revData && typeof revData === "object" && Array.isArray((revData as any).data)) {
+      setReviews((revData as any).data);
+    } else {
+      setReviews([]);
+    }
   };
 
   useEffect(() => {
