@@ -3,17 +3,34 @@ import { prisma, sanitizeTransaction, sanitizeProduct, stringifyProduct } from "
 
 const router = Router();
 
-// GET Current Seller Status
+// GET Current Seller Status - FIXED: Return isSeller, verification, and balances
 router.get("/status", async (req, res) => {
   try {
     const userId = req.headers["x-user-id"] as string;
     if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อน" });
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "ไม่พบผู้ใช้ในระบบ" });
+    }
+
     const verification = await prisma.sellerVerification.findFirst({
       where: { userId }
     });
 
-    res.json(verification || { status: "not_applied" });
+    // Check if user is an approved seller (by role)
+    const isSeller = user.role === "seller_external" || user.role === "seller_internal";
+
+    res.json({
+      isSeller,
+      verification: verification || { status: "not_applied" },
+      pendingBalance: user.pendingBalance || 0,
+      withdrawableBalance: user.withdrawableBalance || 0,
+      userRole: user.role // Include user role for frontend to check permissions
+    });
   } catch (err: any) {
     console.error("Error fetching seller status:", err);
     res.status(500).json({ error: err.message || "Failed to fetch seller status" });
@@ -94,13 +111,13 @@ router.post("/apply", async (req, res) => {
     });
 
     if (existingApplication && existingApplication.status === "pending") {
-      return res.status(400).json({ error: "คุณมีรายการส่งคำขอสมัครเป็นผู้ขายอยู่ระหว่างรอการอนุมัติอยู่แล้ว" });
+      return res.status(400).json({ error: "คุณมีรายการส่งคำขอสมัครเป็นผู้ขายอยู่ระหว่างรอการอนุมัติ" });
     }
 
     const { shopName, shopDescription, idCardPhotoUrl, bankName, bankAccountNumber, bankAccountName } = req.body;
 
     if (!shopName || !idCardPhotoUrl) {
-      return res.status(400).json({ error: "กรุณาระบุข้อมูลที่จำเป็นให้ครบถ้วน เช่น ชื่อร้านค้าและรูปภาพเอกสารยืนยันตัวตน" });
+      return res.status(400).json({ error: "กรุณาระบุข้อมูลที่จำเป็นให้ครบถ้วน เช่น ชื่อร้านค้าและรูปเอกสารประจำตัว" });
     }
 
     const appId = `apply-${Date.now()}`;
@@ -132,7 +149,7 @@ router.post("/apply", async (req, res) => {
       }
     });
 
-    res.json({ success: true, message: "ส่งคำขอเป็นผู้ขายเรียบร้อยแล้ว! ระบบกำลังรอการตรวจสอบจากผู้ดูแลระบบสูงสุด", application: newApp });
+    res.json({ success: true, message: "ส่งคำขอเป็นผู้ขายเรียบร้อยแล้ว! ระบบกำลังรอการตรวจสอบจากทีมแอดมินภายใน 10-60 นาที" });
   } catch (err: any) {
     console.error("Error applying for seller:", err);
     res.status(500).json({ error: err.message || "Failed to submit application" });
@@ -166,12 +183,11 @@ router.post("/products", async (req, res) => {
 
     if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อน" });
 
-    const verification = await prisma.sellerVerification.findFirst({
-      where: { userId, status: "approved" }
-    });
+    // Check if seller is approved - use role-based check
+    const isSeller = role === "seller_external" || role === "seller_internal" || role === "admin";
 
-    if (!verification && role !== "admin") {
-      return res.status(403).json({ error: "คุณยังไม่ได้รับอนุญาตให้เพิ่มผลิตภัณฑ์ (สิทธิ์การเป็นผู้ขายยังไม่อนุมัติ)" });
+    if (!isSeller) {
+      return res.status(403).json({ error: "คุณยังไม่ได้รับอนุญาตให้เพิ่มผลิตภัณฑ์ (สิทธิ์การขายไม่ถูกต้อง)" });
     }
 
     const { categoryId, name, price, description, imageUrl, stock, details, type, videoUrl } = req.body;
@@ -179,6 +195,11 @@ router.post("/products", async (req, res) => {
     if (!categoryId || !name || price === undefined) {
       return res.status(400).json({ error: "กรุณาระบุข้อมูลที่จำเป็น เช่น หมวดหมู่ ชื่อสินค้า และราคา" });
     }
+
+    // Get seller name from verification
+    const verification = await prisma.sellerVerification.findFirst({
+      where: { userId }
+    });
 
     const prodId = `prod-sl-${Date.now()}`;
     const productData = stringifyProduct({
@@ -286,7 +307,7 @@ router.post("/orders/:id/ship", async (req, res) => {
     statusUpdates.push({
       status: "shipped",
       date: new Date().toISOString(),
-      note: note || `ร้านค้าทำการบรรจุกล่องและเตรียมมอบส่งพัสดุผ่านผู้ขนส่ง [${trackingCarrier || "ไม่มีการกำหนด"}] เลขติดตาม: [${trackingNumber || "ไม่มีการกำหนด"}] แล้วค่ะ`
+      note: note || `ร้านค้าทำการบรรจุกล่องและเตรียมมอบส่งพัสดุผ่านผู้ขนส่ง [${trackingCarrier}]`
     });
 
     const updated = await prisma.transaction.update({
@@ -329,7 +350,7 @@ router.post("/orders/:id/deliver", async (req, res) => {
     const role = req.headers["x-user-role"] as string;
 
     if (!isBuyer && role !== "admin") {
-      return res.status(403).json({ error: "คุณไม่มีส่วนเกี่ยวข้องในคำสั่งซื้อนี้ หรือไม่มีสิทธิ์ปล่อยวงเงินโอนชำระสินค้าให้ผู้ขาย" });
+      return res.status(403).json({ error: "คุณไม่มีส่วนเกี่ยวข้องในคำสั่งซื้อนี้ หรือไม่มีสิทธิ์ดำเนินการ" });
     }
 
     const sanitizedTx = sanitizeTransaction(tx);
@@ -338,7 +359,7 @@ router.post("/orders/:id/deliver", async (req, res) => {
     statusUpdates.push({
       status: "delivered",
       date: new Date().toISOString(),
-      note: "ผู้สั่งซื้อได้รับพัสดุสินค้าและกดยืนยันการรับพัสดุปลายทางเรียบร้อยแล้ว ระบบทำการปลดล็อคยอดเงิน Escrow สู่ถุงเงินของผู้ขายสินค้าหลักทันที"
+      note: "ผู้สั่งซื้อได้รับพัสดุสินค้าและกดยืนยันการรับพัสดุปลายทางเรียบร้อยแล้ว"
     });
 
     // Check if seller was already credited to prevent double crediting
@@ -436,7 +457,7 @@ router.post("/withdraw", async (req, res) => {
     });
 
     if (!verification) {
-      return res.status(403).json({ error: "ฟังก์ชั่นเบิกเงินสงวนไว้ให้ผู้ค้าที่ลงทะเบียนร้านค้าสำเร็จเท่านั้น" });
+      return res.status(403).json({ error: "ฟังก์ชั่นเบิกเงินสงวนไว้ให้ผู้ค้าที่ลงทะเบียนร้านค้าเท่านั้น" });
     }
 
     const { amount, bankName, bankAccountNumber, bankAccountName } = req.body;
@@ -448,7 +469,7 @@ router.post("/withdraw", async (req, res) => {
 
     const currentWithdrawable = user.withdrawableBalance || 0;
     if (currentWithdrawable < requestAmount) {
-      return res.status(400).json({ error: "ยอดเงินคงเหลือที่ถอนได้ของคุณไม่เพียงพอสำหรับการถอนเงินครั้งนี้ค่ะ" });
+      return res.status(400).json({ error: "ยอดเงินคงเหลือที่ถอนได้ของคุณไม่เพียงพอสำหรับการถอนครั้งนี้" });
     }
 
     // Deduct from withdrawable balance immediately (lock it)
@@ -474,7 +495,7 @@ router.post("/withdraw", async (req, res) => {
       }
     });
 
-    res.json({ success: true, message: "คำขอเบิกเงินถอนของคุณได้รับการส่งแล้ว! กรุณารอรับการโอนจากแอดมินเว็บหลัก", withdrawal: newWithdrawal });
+    res.json({ success: true, message: "คำขอเบิกเงินถอนของคุณได้รับการส่งแล้ว! กรุณารอรับการโอนเงินจากแอดมินภายใน 24 ชั่วโมง" });
   } catch (err: any) {
     console.error("Error submitting withdrawal request:", err);
     res.status(500).json({ error: err.message || "Failed to submit withdrawal request" });
