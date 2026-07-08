@@ -3,6 +3,11 @@ import { prisma, sanitizeTransaction, sanitizeProduct, stringifyProduct } from "
 
 const router = Router();
 
+// Helper: Check if user has seller permissions
+const isSeller = (role: string): boolean => {
+  return role === "seller_external" || role === "seller_internal" || role === "admin";
+};
+
 // GET Current Seller Status - FIXED: Return isSeller, verification, and balances
 router.get("/status", async (req, res) => {
   try {
@@ -179,15 +184,21 @@ router.get("/products", async (req, res) => {
 router.post("/products", async (req, res) => {
   try {
     const userId = req.headers["x-user-id"] as string;
-    const role = req.headers["x-user-role"] as string;
+    let role = req.headers["x-user-role"] as string;
 
     if (!userId) return res.status(401).json({ error: "โปรดเข้าสู่ระบบก่อน" });
 
-    // Check if seller is approved - use role-based check
-    const isSeller = role === "seller_external" || role === "seller_internal" || role === "admin";
+    // Get role from user if not in headers
+    if (!role) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user) {
+        role = user.role;
+      }
+    }
 
-    if (!isSeller) {
-      return res.status(403).json({ error: "คุณยังไม่ได้รับอนุญาตให้เพิ่มผลิตภัณฑ์ (สิทธิ์การขายไม่ถูกต้อง)" });
+    // Check if seller is approved - use role-based check
+    if (!isSeller(role)) {
+      return res.status(403).json({ error: "คุณยังไม่ได้รับอนุญาตให้เพิ่มผลิตภัณฑ์ - กรุณาแสดงสิทธิ์การเป็นผู้ขาย" });
     }
 
     const { categoryId, name, price, description, imageUrl, stock, details, type, videoUrl } = req.body;
