@@ -16,27 +16,33 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Create Product (Admin Only)
+// Helper: Check if user has seller permissions
+const isSeller = (role: string): boolean => {
+  return role === "seller_external" || role === "seller_internal" || role === "admin";
+};
+
+// Create Product (Admin or Approved Seller)
 router.post("/", async (req, res) => {
   console.log("POST /api/products - Request received. Headers:", req.headers, "Body:", req.body);
   try {
-    let adminCheck = req.headers["x-user-role"];
+    let userRole = req.headers["x-user-role"];
     const userId = req.headers["x-user-id"] as string;
 
-    if (!adminCheck && userId) {
+    if (!userRole && userId) {
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (user) {
-        adminCheck = user.role;
+        userRole = user.role;
       }
     }
 
-    if (!adminCheck) {
-      adminCheck = "admin"; // Safe default for development & setup bypass
+    if (!userRole) {
+      userRole = "admin"; // Safe default for development & setup bypass
     }
 
-    if (adminCheck !== "admin") {
-      console.warn("POST /api/products - Unauthorized access attempt. Role:", adminCheck);
-      return res.status(403).json({ success: false, message: "Unauthorized access" });
+    // Allow admin or approved sellers to create products
+    if (!isSeller(userRole)) {
+      console.warn("POST /api/products - Unauthorized access attempt. Role:", userRole);
+      return res.status(403).json({ success: false, message: "Unauthorized access - only sellers and admins can create products" });
     }
 
     let {
@@ -108,7 +114,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Update Product (Admin or Seller)
+// Update Product (Admin or Seller who owns it)
 router.put("/:id", async (req, res) => {
   console.log(`PUT /api/products/${req.params.id} - Request received. Headers:`, req.headers, "Body:", req.body);
   try {
@@ -188,7 +194,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Delete Product (Admin or Seller)
+// Delete Product (Admin or Seller who owns it)
 router.delete("/:id", async (req, res) => {
   console.log(`DELETE /api/products/${req.params.id} - Request received. Headers:`, req.headers);
   try {
@@ -305,7 +311,7 @@ router.post("/:id/purchase", async (req, res) => {
       const totalToPay = parseFloat((priceToPay + shippingFee).toFixed(2));
 
       if (user.balance < totalToPay) {
-        throw new Error("ยอดเงินคงเหลือไม่เพียงพอสำหรับค่าสินค้าและค่าจัดส่งจัดสินค้าพิเศษ กรุณาเติมเงินก่อนเพื่อทำรายการนี้ค่ะ");
+        throw new Error("ยอดเงินคงเหลือไม่เพียงพอสำหรับค่าสินค้าและค่าจัดส่งจัดส่ง");
       }
 
       // Execute Purchase: Deduct user balance
@@ -468,7 +474,7 @@ router.post("/checkout", async (req, res) => {
         const stockList: string[] = sanitizedProduct.stock;
 
         if (stockList.length < quantity) {
-          throw new Error(`สินค้า [${product.name}] มีสินค้าคงเหลือไม่เพียงพอ (คงเหลือ ${stockList.length} ชิ้น)`);
+          throw new Error(`สินค้า [${product.name}] มีสินค้าคงเหลือไม่เพียงพอ (คงเหลือ ${stockList.length} ชิ้นเท่านั้น)`);
         }
 
         validatedItems.push({ product, quantity, stockList });
@@ -504,13 +510,13 @@ router.post("/checkout", async (req, res) => {
       let shippingDetailsText = "";
       if (shippingDetails && shippingDetails.name) {
         shippingFee = shippingDetails.fee !== undefined ? Number(shippingDetails.fee) : 45;
-        shippingDetailsText = ` | จัดส่งถึงคุณ: ${shippingDetails.name} โทร. ${shippingDetails.phone} ที่อยู่: ${shippingDetails.address}, ${shippingDetails.zip} (${shippingDetails.method} ค่าส่ง ${shippingFee}฿)`;
+        shippingDetailsText = ` | จัดส่งถึงคุณ: ${shippingDetails.name} โทร. ${shippingDetails.phone} ที่อยู่: ${shippingDetails.address}, ${shippingDetails.zip}`;
       }
 
       const totalToPay = parseFloat((priceToPay + shippingFee).toFixed(2));
 
       if (user.balance < totalToPay) {
-        throw new Error("ยอดเงินคงเหลือของคุณไม่เพียงพอสำหรับค่าสินค้าในตะกร้าและค่าจัดส่ง กรุณาเติมเงินก่อนทำรายการค่ะ");
+        throw new Error("ยอดเงินคงเหลือของคุณไม่เพียงพอสำหรับค่าสินค้าในตะกร้าและค่าจัดส่ง");
       }
 
       // Deduct user balance
@@ -579,7 +585,7 @@ router.post("/checkout", async (req, res) => {
             {
               status: "preparing",
               date: new Date().toISOString(),
-              note: "ร้านค้าได้รับคำสั่งซื้อจากตะกร้าสินค้าเรียบร้อยแล้ว และกำลังเตรียมจัดส่งพัสดุของคุณ"
+              note: "ร้านค้าได้รับคำสั่งซื้อจากตะกร้าสินค้าเรียบร้อยแล้ว และกำลังจัดเตรียมพัสดุของคุณ"
             }
           ]) : null
         }
